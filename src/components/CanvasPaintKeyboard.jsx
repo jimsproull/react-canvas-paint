@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { MODES } from './CanvasPaint';
+import { MODES, BRUSHES } from './CanvasPaint';
 
 export const PENCIL = 'pencil';
 export const BRUSH = 'brush';

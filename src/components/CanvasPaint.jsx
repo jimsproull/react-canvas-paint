@@ -3,7 +3,7 @@ import { CanvasPaint as styles } from './CanvasPaint.css';
 import PropTypes from 'prop-types';
 
 const PENCIL = 'pencil';
-const PAINT = 'paint';
+const BRUSH = 'brush';
 const ERASER = 'eraser';
 
 const CLEAR = 'clear';
@@ -14,12 +14,13 @@ export const MODES = {
 };
 export const BRUSHES = {
     PENCIL,
-    PAINT,
+    BRUSH,
     ERASER
 };
 
 const CanvasPaint = ({
     brushType,
+    brushWidth,
     color,
     width = '400px',
     height = '400px',
@@ -49,7 +50,9 @@ const CanvasPaint = ({
             }}
             onMouseMove={e =>
                 isDrawing &&
-                setLastPosition(onMouseMove(e, brushType, color, lastPosition))
+                setLastPosition(
+                    onMouseMove(e, brushType, brushWidth, color, lastPosition)
+                )
             }
             onMouseUp={e => {
                 setIsDrawing(false);
@@ -62,11 +65,19 @@ const CanvasPaint = ({
 
 CanvasPaint.propTypes = {
     clear: PropTypes.bool,
-    brushType: PropTypes.oneOf([PENCIL, ERASER, PAINT]),
+    brushType: PropTypes.oneOf(Object.values(BRUSHES)),
     color: PropTypes.string,
     width: PropTypes.string,
     height: PropTypes.string,
-    mode: PropTypes.oneOf([CLEAR, DRAW])
+    mode: PropTypes.oneOf(Object.values(MODES)),
+    brushWidth: PropTypes.number
+};
+
+CanvasPaint.defaultProps = {
+    brushWidth: 4,
+    color: 'black',
+    width: '400px',
+    height: '400px'
 };
 
 function clearCanvas(canvas) {
@@ -78,12 +89,20 @@ function onMouseDown() {}
 
 function onMouseUp() {}
 
-function onMouseMove(e, brushType, color = 'red', lastPosition) {
+function onMouseMove(e, brushType, brushWidth, color = 'red', lastPosition) {
     const canvas = e.target;
     const pos = getMousePos(canvas, e.clientX, e.clientY);
     const ctx = canvas.getContext('2d');
-    ctx.lineWidth = 4;
-    ctx.strokeStyle = color;
+    ctx.lineWidth = brushWidth;
+    let strokeStyle = color;
+    ctx.globalCompositeOperation = 'source-over';
+    if (brushType == BRUSH) {
+        strokeStyle = color;
+    } else if (brushType == ERASER) {
+        ctx.globalCompositeOperation = 'destination-out';
+        strokeStyle = 'black';
+    }
+    ctx.strokeStyle = strokeStyle;
     ctx.beginPath();
     ctx.moveTo(
         (lastPosition && lastPosition.x) || pos.x,

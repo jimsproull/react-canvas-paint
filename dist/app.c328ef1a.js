@@ -24766,7 +24766,7 @@ function _iterableToArrayLimit(arr, i) { var _arr = []; var _n = true; var _d = 
 function _arrayWithHoles(arr) { if (Array.isArray(arr)) return arr; }
 
 var PENCIL = 'pencil';
-var PAINT = 'paint';
+var BRUSH = 'brush';
 var ERASER = 'eraser';
 var CLEAR = 'clear';
 var DRAW = 'draw';
@@ -24777,13 +24777,14 @@ var MODES = {
 exports.MODES = MODES;
 var BRUSHES = {
   PENCIL: PENCIL,
-  PAINT: PAINT,
+  BRUSH: BRUSH,
   ERASER: ERASER
 };
 exports.BRUSHES = BRUSHES;
 
 var CanvasPaint = function CanvasPaint(_ref) {
   var brushType = _ref.brushType,
+      brushWidth = _ref.brushWidth,
       color = _ref.color,
       _ref$width = _ref.width,
       width = _ref$width === void 0 ? '400px' : _ref$width,
@@ -24827,7 +24828,7 @@ var CanvasPaint = function CanvasPaint(_ref) {
       _onMouseDown(e);
     },
     onMouseMove: function onMouseMove(e) {
-      return isDrawing && setLastPosition(_onMouseMove(e, brushType, color, lastPosition));
+      return isDrawing && setLastPosition(_onMouseMove(e, brushType, brushWidth, color, lastPosition));
     },
     onMouseUp: function onMouseUp(e) {
       setIsDrawing(false);
@@ -24840,11 +24841,18 @@ var CanvasPaint = function CanvasPaint(_ref) {
 
 CanvasPaint.propTypes = {
   clear: _propTypes.default.bool,
-  brushType: _propTypes.default.oneOf([PENCIL, ERASER, PAINT]),
+  brushType: _propTypes.default.oneOf(Object.values(BRUSHES)),
   color: _propTypes.default.string,
   width: _propTypes.default.string,
   height: _propTypes.default.string,
-  mode: _propTypes.default.oneOf([CLEAR, DRAW])
+  mode: _propTypes.default.oneOf(Object.values(MODES)),
+  brushWidth: _propTypes.default.number
+};
+CanvasPaint.defaultProps = {
+  brushWidth: 4,
+  color: 'black',
+  width: '400px',
+  height: '400px'
 };
 
 function clearCanvas(canvas) {
@@ -24856,14 +24864,24 @@ function _onMouseDown() {}
 
 function _onMouseUp() {}
 
-function _onMouseMove(e, brushType) {
-  var color = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 'red';
-  var lastPosition = arguments.length > 3 ? arguments[3] : undefined;
+function _onMouseMove(e, brushType, brushWidth) {
+  var color = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : 'red';
+  var lastPosition = arguments.length > 4 ? arguments[4] : undefined;
   var canvas = e.target;
   var pos = getMousePos(canvas, e.clientX, e.clientY);
   var ctx = canvas.getContext('2d');
-  ctx.lineWidth = 4;
-  ctx.strokeStyle = color;
+  ctx.lineWidth = brushWidth;
+  var strokeStyle = color;
+  ctx.globalCompositeOperation = 'source-over';
+
+  if (brushType == BRUSH) {
+    strokeStyle = color;
+  } else if (brushType == ERASER) {
+    ctx.globalCompositeOperation = 'destination-out';
+    strokeStyle = 'black';
+  }
+
+  ctx.strokeStyle = strokeStyle;
   ctx.beginPath();
   ctx.moveTo(lastPosition && lastPosition.x || pos.x, lastPosition && lastPosition.y || pos.y);
   ctx.lineTo(pos.x, pos.y);
@@ -24934,7 +24952,7 @@ var CanvasPaintKeyboard = function CanvasPaintKeyboard(_ref) {
       return setMode(_CanvasPaint.MODES.CLEAR);
     },
     e: function e() {
-      return setBrushType(BRUSHES.ERASER);
+      return setBrushType(_CanvasPaint.BRUSHES.ERASER);
     }
   };
 
@@ -25012,7 +25030,7 @@ var parent = module.bundle.parent;
 if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== 'undefined') {
   var hostname = "" || location.hostname;
   var protocol = location.protocol === 'https:' ? 'wss' : 'ws';
-  var ws = new WebSocket(protocol + '://' + hostname + ':' + "56980" + '/');
+  var ws = new WebSocket(protocol + '://' + hostname + ':' + "60905" + '/');
 
   ws.onmessage = function (event) {
     var data = JSON.parse(event.data);
