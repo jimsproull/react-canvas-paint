@@ -24745,7 +24745,7 @@ if ("development" !== 'production') {
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.default = void 0;
+exports.default = exports.BRUSHES = exports.MODES = void 0;
 
 var _react = _interopRequireWildcard(require("react"));
 
@@ -24765,33 +24765,31 @@ function _iterableToArrayLimit(arr, i) { var _arr = []; var _n = true; var _d = 
 
 function _arrayWithHoles(arr) { if (Array.isArray(arr)) return arr; }
 
-var ref = _react.default.createRef();
+var PENCIL = 'pencil';
+var PAINT = 'paint';
+var ERASER = 'eraser';
+var CLEAR = 'clear';
+var DRAW = 'draw';
+var MODES = {
+  CLEAR: CLEAR,
+  DRAW: DRAW
+};
+exports.MODES = MODES;
+var BRUSHES = {
+  PENCIL: PENCIL,
+  PAINT: PAINT,
+  ERASER: ERASER
+};
+exports.BRUSHES = BRUSHES;
 
 var CanvasPaint = function CanvasPaint(_ref) {
-  var clear = _ref.clear;
-  (0, _react.useEffect)(function () {// Update the document title using the browser API
-    // document.title = `You clicked ${count} times`;
-  });
-  return _react.default.createElement(CanvasComponent, {
-    ref: ref,
-    onMouseDown: onMouseDown,
-    onMouseUp: onMouseUp,
-    onMouseMove: onMouseMove,
-    className: _CanvasPaint.CanvasPaint
-  });
-};
-
-CanvasPaint.propTypes = {
-  clear: _propTypes.default.bool
-};
-CanvasPaint.defaultProps = {
-  clear: false
-};
-var CanvasComponent = (0, _react.forwardRef)(function (_ref2, ref) {
-  var _onMouseDown = _ref2.onMouseDown,
-      className = _ref2.className,
-      _onMouseMove = _ref2.onMouseMove,
-      _onMouseUp = _ref2.onMouseUp;
+  var brushType = _ref.brushType,
+      color = _ref.color,
+      _ref$width = _ref.width,
+      width = _ref$width === void 0 ? '400px' : _ref$width,
+      _ref$height = _ref.height,
+      height = _ref$height === void 0 ? '400px' : _ref$height,
+      mode = _ref.mode;
 
   var _useState = (0, _react.useState)(false),
       _useState2 = _slicedToArray(_useState, 2),
@@ -24803,18 +24801,33 @@ var CanvasComponent = (0, _react.forwardRef)(function (_ref2, ref) {
       lastPosition = _useState4[0],
       setLastPosition = _useState4[1];
 
+  var _useState5 = (0, _react.useState)(mode),
+      _useState6 = _slicedToArray(_useState5, 2),
+      lastMode = _useState6[0],
+      setLastMode = _useState6[1];
+
+  var canvas = (0, _react.useRef)(null);
+  (0, _react.useEffect)(function () {
+    if (mode != lastMode && canvas.current) {
+      if (mode == CLEAR) {
+        clearCanvas(canvas.current);
+      }
+
+      setLastMode(mode);
+    }
+  });
   return _react.default.createElement("canvas", {
-    ref: ref,
-    width: "400px",
-    height: "400px",
+    className: _CanvasPaint.CanvasPaint,
+    ref: canvas,
+    width: width,
+    height: height,
     onMouseDown: function onMouseDown(e) {
       setIsDrawing(true);
 
       _onMouseDown(e);
     },
-    className: className,
     onMouseMove: function onMouseMove(e) {
-      return isDrawing && setLastPosition(_onMouseMove(e, lastPosition));
+      return isDrawing && setLastPosition(_onMouseMove(e, brushType, color, lastPosition));
     },
     onMouseUp: function onMouseUp(e) {
       setIsDrawing(false);
@@ -24823,18 +24836,34 @@ var CanvasComponent = (0, _react.forwardRef)(function (_ref2, ref) {
       _onMouseUp(e);
     }
   });
-});
+};
 
-function onMouseDown() {}
+CanvasPaint.propTypes = {
+  clear: _propTypes.default.bool,
+  brushType: _propTypes.default.oneOf([PENCIL, ERASER, PAINT]),
+  color: _propTypes.default.string,
+  width: _propTypes.default.string,
+  height: _propTypes.default.string,
+  mode: _propTypes.default.oneOf([CLEAR, DRAW])
+};
 
-function onMouseUp() {}
+function clearCanvas(canvas) {
+  var ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+}
 
-function onMouseMove(e, lastPosition) {
+function _onMouseDown() {}
+
+function _onMouseUp() {}
+
+function _onMouseMove(e, brushType) {
+  var color = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 'red';
+  var lastPosition = arguments.length > 3 ? arguments[3] : undefined;
   var canvas = e.target;
   var pos = getMousePos(canvas, e.clientX, e.clientY);
   var ctx = canvas.getContext('2d');
   ctx.lineWidth = 4;
-  ctx.strokeStyle = 'green';
+  ctx.strokeStyle = color;
   ctx.beginPath();
   ctx.moveTo(lastPosition && lastPosition.x || pos.x, lastPosition && lastPosition.y || pos.y);
   ctx.lineTo(pos.x, pos.y);
@@ -24852,7 +24881,95 @@ function getMousePos(canvas, clientX, clientY) {
 
 var _default = CanvasPaint;
 exports.default = _default;
-},{"react":"node_modules/react/index.js","./CanvasPaint.css":"src/components/CanvasPaint.css","prop-types":"node_modules/prop-types/index.js"}],"app.js":[function(require,module,exports) {
+},{"react":"node_modules/react/index.js","./CanvasPaint.css":"src/components/CanvasPaint.css","prop-types":"node_modules/prop-types/index.js"}],"src/components/CanvasPaintKeyboard.jsx":[function(require,module,exports) {
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.default = exports.ERASER = exports.BRUSH = exports.PENCIL = void 0;
+
+var _react = _interopRequireWildcard(require("react"));
+
+var _CanvasPaint = require("./CanvasPaint");
+
+function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) { var desc = Object.defineProperty && Object.getOwnPropertyDescriptor ? Object.getOwnPropertyDescriptor(obj, key) : {}; if (desc.get || desc.set) { Object.defineProperty(newObj, key, desc); } else { newObj[key] = obj[key]; } } } } newObj.default = obj; return newObj; } }
+
+function _slicedToArray(arr, i) { return _arrayWithHoles(arr) || _iterableToArrayLimit(arr, i) || _nonIterableRest(); }
+
+function _nonIterableRest() { throw new TypeError("Invalid attempt to destructure non-iterable instance"); }
+
+function _iterableToArrayLimit(arr, i) { var _arr = []; var _n = true; var _d = false; var _e = undefined; try { for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) { _arr.push(_s.value); if (i && _arr.length === i) break; } } catch (err) { _d = true; _e = err; } finally { try { if (!_n && _i["return"] != null) _i["return"](); } finally { if (_d) throw _e; } } return _arr; }
+
+function _arrayWithHoles(arr) { if (Array.isArray(arr)) return arr; }
+
+var PENCIL = 'pencil';
+exports.PENCIL = PENCIL;
+var BRUSH = 'brush';
+exports.BRUSH = BRUSH;
+var ERASER = 'eraser';
+exports.ERASER = ERASER;
+var colors = ['black', 'red', 'blue', 'green', 'yellow', 'orange', 'purple'];
+
+var CanvasPaintKeyboard = function CanvasPaintKeyboard(_ref) {
+  var children = _ref.children;
+
+  var _useState = (0, _react.useState)('black'),
+      _useState2 = _slicedToArray(_useState, 2),
+      color = _useState2[0],
+      setColor = _useState2[1];
+
+  var _useState3 = (0, _react.useState)(undefined),
+      _useState4 = _slicedToArray(_useState3, 2),
+      mode = _useState4[0],
+      setMode = _useState4[1];
+
+  var _useState5 = (0, _react.useState)(undefined),
+      _useState6 = _slicedToArray(_useState5, 2),
+      brushType = _useState6[0],
+      setBrushType = _useState6[1];
+
+  var keys = {
+    c: function c() {
+      return setMode(_CanvasPaint.MODES.CLEAR);
+    },
+    e: function e() {
+      return setBrushType(BRUSHES.ERASER);
+    }
+  };
+
+  function onKeyDown(e) {
+    var number = Number(e.key);
+
+    if (colors[number]) {
+      setColor(colors[number]);
+    } else if (keys[e.key]) {
+      keys[e.key]();
+    }
+  }
+
+  function onKeyUp() {
+    setMode(_CanvasPaint.MODES.DRAW);
+  }
+
+  (0, _react.useEffect)(function () {
+    document.addEventListener('keydown', onKeyDown);
+    document.addEventListener('keyup', onKeyUp);
+    return function () {
+      document.removeEventListener('keydown', onKeyDown);
+      document.removeEventListener('keyup', onKeyUp);
+    };
+  });
+  return _react.default.cloneElement(children, {
+    color: color,
+    mode: mode,
+    brushType: brushType
+  });
+};
+
+var _default = CanvasPaintKeyboard;
+exports.default = _default;
+},{"react":"node_modules/react/index.js","./CanvasPaint":"src/components/CanvasPaint.jsx"}],"app.js":[function(require,module,exports) {
 "use strict";
 
 var _react = _interopRequireDefault(require("react"));
@@ -24861,10 +24978,14 @@ var _reactDom = _interopRequireDefault(require("react-dom"));
 
 var _CanvasPaint = _interopRequireDefault(require("./src/components/CanvasPaint.jsx"));
 
+var _CanvasPaintKeyboard = _interopRequireDefault(require("./src/components/CanvasPaintKeyboard.jsx"));
+
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
-_reactDom.default.render(_react.default.createElement(_CanvasPaint.default, null), document.getElementById('app'));
-},{"react":"node_modules/react/index.js","react-dom":"node_modules/react-dom/index.js","./src/components/CanvasPaint.jsx":"src/components/CanvasPaint.jsx"}],"../../../../usr/local/lib/node_modules/parcel-bundler/src/builtins/hmr-runtime.js":[function(require,module,exports) {
+window.renderCanvasPaint = function (node) {
+  _reactDom.default.render(_react.default.createElement(_CanvasPaintKeyboard.default, null, _react.default.createElement(_CanvasPaint.default, null)), node);
+};
+},{"react":"node_modules/react/index.js","react-dom":"node_modules/react-dom/index.js","./src/components/CanvasPaint.jsx":"src/components/CanvasPaint.jsx","./src/components/CanvasPaintKeyboard.jsx":"src/components/CanvasPaintKeyboard.jsx"}],"../../../../usr/local/lib/node_modules/parcel-bundler/src/builtins/hmr-runtime.js":[function(require,module,exports) {
 var global = arguments[3];
 var OVERLAY_ID = '__parcel__error__overlay__';
 var OldModule = module.bundle.Module;

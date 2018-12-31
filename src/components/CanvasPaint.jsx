@@ -1,69 +1,89 @@
-import React, { useState, useEffect, memo, forwardRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { CanvasPaint as styles } from './CanvasPaint.css';
 import PropTypes from 'prop-types';
 
-const ref = React.createRef();
-const CanvasPaint = ({ clear }) => {
+const PENCIL = 'pencil';
+const PAINT = 'paint';
+const ERASER = 'eraser';
+
+const CLEAR = 'clear';
+const DRAW = 'draw';
+export const MODES = {
+    CLEAR,
+    DRAW
+};
+export const BRUSHES = {
+    PENCIL,
+    PAINT,
+    ERASER
+};
+
+const CanvasPaint = ({
+    brushType,
+    color,
+    width = '400px',
+    height = '400px',
+    mode
+}) => {
+    const [isDrawing, setIsDrawing] = useState(false);
+    const [lastPosition, setLastPosition] = useState(undefined);
+    const [lastMode, setLastMode] = useState(mode);
+    const canvas = useRef(null);
     useEffect(() => {
-        // Update the document title using the browser API
-        // document.title = `You clicked ${count} times`;
+        if (mode != lastMode && canvas.current) {
+            if (mode == CLEAR) {
+                clearCanvas(canvas.current);
+            }
+            setLastMode(mode);
+        }
     });
     return (
-        <CanvasComponent
-            ref={ref}
-            onMouseDown={onMouseDown}
-            onMouseUp={onMouseUp}
-            onMouseMove={onMouseMove}
+        <canvas
             className={styles}
+            ref={canvas}
+            width={width}
+            height={height}
+            onMouseDown={e => {
+                setIsDrawing(true);
+                onMouseDown(e);
+            }}
+            onMouseMove={e =>
+                isDrawing &&
+                setLastPosition(onMouseMove(e, brushType, color, lastPosition))
+            }
+            onMouseUp={e => {
+                setIsDrawing(false);
+                setLastPosition(undefined);
+                onMouseUp(e);
+            }}
         />
     );
 };
 
 CanvasPaint.propTypes = {
-    clear: PropTypes.bool
+    clear: PropTypes.bool,
+    brushType: PropTypes.oneOf([PENCIL, ERASER, PAINT]),
+    color: PropTypes.string,
+    width: PropTypes.string,
+    height: PropTypes.string,
+    mode: PropTypes.oneOf([CLEAR, DRAW])
 };
 
-CanvasPaint.defaultProps = {
-    clear: false
-};
-
-const CanvasComponent = forwardRef(
-    ({ onMouseDown, className, onMouseMove, onMouseUp }, ref) => {
-        const [isDrawing, setIsDrawing] = useState(false);
-        const [lastPosition, setLastPosition] = useState(undefined);
-        return (
-            <canvas
-                ref={ref}
-                width="400px"
-                height="400px"
-                onMouseDown={e => {
-                    setIsDrawing(true);
-                    onMouseDown(e);
-                }}
-                className={className}
-                onMouseMove={e =>
-                    isDrawing && setLastPosition(onMouseMove(e, lastPosition))
-                }
-                onMouseUp={e => {
-                    setIsDrawing(false);
-                    setLastPosition(undefined);
-                    onMouseUp(e);
-                }}
-            />
-        );
-    }
-);
+function clearCanvas(canvas) {
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+}
 
 function onMouseDown() {}
 
 function onMouseUp() {}
 
-function onMouseMove(e, lastPosition) {
+function onMouseMove(e, brushType, color = 'red', lastPosition) {
     const canvas = e.target;
     const pos = getMousePos(canvas, e.clientX, e.clientY);
     const ctx = canvas.getContext('2d');
     ctx.lineWidth = 4;
-    ctx.strokeStyle = 'green';
+    ctx.strokeStyle = color;
     ctx.beginPath();
     ctx.moveTo(
         (lastPosition && lastPosition.x) || pos.x,
