@@ -24110,8 +24110,7 @@ var reloadCSS = require('_css_loader');
 module.hot.dispose(reloadCSS);
 module.hot.accept(reloadCSS);
 module.exports = {
-  "CanvasPaint": "_CanvasPaint_wol7s_1",
-  "shit": "_shit_wol7s_7"
+  "CanvasPaint": "_CanvasPaint_1sap7_1"
 };
 },{"_css_loader":"../../../../usr/local/lib/node_modules/parcel-bundler/src/builtins/css-loader.js"}],"node_modules/prop-types/factoryWithTypeCheckers.js":[function(require,module,exports) {
 /**
@@ -24757,6 +24756,14 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 
 function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) { var desc = Object.defineProperty && Object.getOwnPropertyDescriptor ? Object.getOwnPropertyDescriptor(obj, key) : {}; if (desc.get || desc.set) { Object.defineProperty(newObj, key, desc); } else { newObj[key] = obj[key]; } } } } newObj.default = obj; return newObj; } }
 
+function _toConsumableArray(arr) { return _arrayWithoutHoles(arr) || _iterableToArray(arr) || _nonIterableSpread(); }
+
+function _nonIterableSpread() { throw new TypeError("Invalid attempt to spread non-iterable instance"); }
+
+function _iterableToArray(iter) { if (Symbol.iterator in Object(iter) || Object.prototype.toString.call(iter) === "[object Arguments]") return Array.from(iter); }
+
+function _arrayWithoutHoles(arr) { if (Array.isArray(arr)) { for (var i = 0, arr2 = new Array(arr.length); i < arr.length; i++) { arr2[i] = arr[i]; } return arr2; } }
+
 function _slicedToArray(arr, i) { return _arrayWithHoles(arr) || _iterableToArrayLimit(arr, i) || _nonIterableRest(); }
 
 function _nonIterableRest() { throw new TypeError("Invalid attempt to destructure non-iterable instance"); }
@@ -24797,15 +24804,15 @@ var CanvasPaint = function CanvasPaint(_ref) {
       isDrawing = _useState2[0],
       setIsDrawing = _useState2[1];
 
-  var _useState3 = (0, _react.useState)(undefined),
+  var _useState3 = (0, _react.useState)(mode),
       _useState4 = _slicedToArray(_useState3, 2),
-      lastPosition = _useState4[0],
-      setLastPosition = _useState4[1];
+      lastMode = _useState4[0],
+      setLastMode = _useState4[1];
 
-  var _useState5 = (0, _react.useState)(mode),
+  var _useState5 = (0, _react.useState)([]),
       _useState6 = _slicedToArray(_useState5, 2),
-      lastMode = _useState6[0],
-      setLastMode = _useState6[1];
+      drawPoints = _useState6[0],
+      setDrawPoints = _useState6[1];
 
   var canvas = (0, _react.useRef)(null);
   (0, _react.useEffect)(function () {
@@ -24825,16 +24832,21 @@ var CanvasPaint = function CanvasPaint(_ref) {
     onMouseDown: function onMouseDown(e) {
       setIsDrawing(true);
 
-      _onMouseDown(e);
+      _onMouseDown(e, setDrawPoints);
     },
     onMouseMove: function onMouseMove(e) {
-      return isDrawing && setLastPosition(_onMouseMove(e, brushType, brushWidth, color, lastPosition));
+      if (isDrawing) {
+        var currentPosition = _onMouseMove(e.target, e.clientX, e.clientY, drawPoints, brushType, brushWidth, color);
+
+        setDrawPoints([].concat(_toConsumableArray(drawPoints), [currentPosition]));
+      }
     },
     onMouseUp: function onMouseUp(e) {
       setIsDrawing(false);
-      setLastPosition(undefined);
 
       _onMouseUp(e);
+
+      setDrawPoints([]);
     }
   });
 };
@@ -24849,7 +24861,8 @@ CanvasPaint.propTypes = {
   brushWidth: _propTypes.default.number
 };
 CanvasPaint.defaultProps = {
-  brushWidth: 4,
+  brushType: BRUSH,
+  brushWidth: 10,
   color: 'black',
   width: '400px',
   height: '400px'
@@ -24860,33 +24873,84 @@ function clearCanvas(canvas) {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 }
 
-function _onMouseDown() {}
+function _onMouseDown(e, setDrawPoints) {
+  setDrawPoints([getMousePos(e.target, e.clientX, e.clientY)]);
+}
 
-function _onMouseUp() {}
+function _onMouseUp(e) {
+  var tmpCanvas = getTempCanvasFor(e.target);
 
-function _onMouseMove(e, brushType, brushWidth) {
-  var color = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : 'red';
-  var lastPosition = arguments.length > 4 ? arguments[4] : undefined;
-  var canvas = e.target;
-  var pos = getMousePos(canvas, e.clientX, e.clientY);
-  var ctx = canvas.getContext('2d');
-  ctx.lineWidth = brushWidth;
-  var strokeStyle = color;
-  ctx.globalCompositeOperation = 'source-over';
+  if (tmpCanvas) {
+    var ctx = e.target.getContext('2d');
+    ctx.drawImage(tmpCanvas, 0, 0);
+    removeTempCanvasFor(e.target);
+  }
+}
 
-  if (brushType == BRUSH) {
-    strokeStyle = color;
-  } else if (brushType == ERASER) {
-    ctx.globalCompositeOperation = 'destination-out';
-    strokeStyle = 'black';
+function getTempCanvasFor(canvas, init) {
+  if (init && !canvas._tmpCanvas) {
+    canvas._tmpCanvas = cloneCanvas(canvas);
+    canvas.parentNode.insertBefore(canvas._tmpCanvas, canvas.nextSibling);
   }
 
-  ctx.strokeStyle = strokeStyle;
+  return canvas._tmpCanvas;
+}
+
+function removeTempCanvasFor(canvas) {
+  var tmpCanvas = getTempCanvasFor(canvas);
+  tmpCanvas && tmpCanvas.remove();
+  canvas._tmpCanvas = null;
+}
+
+function _onMouseMove(canvas, x, y, drawPoints, brushType, brushWidth) {
+  var color = arguments.length > 6 && arguments[6] !== undefined ? arguments[6] : 'red';
+  var pos = getMousePos(canvas, x, y);
+  var ctx = canvas.getContext('2d');
+  ctx.globalCompositeOperation = 'source-over';
   ctx.beginPath();
-  ctx.moveTo(lastPosition && lastPosition.x || pos.x, lastPosition && lastPosition.y || pos.y);
-  ctx.lineTo(pos.x, pos.y);
-  ctx.stroke();
+
+  if (brushType == BRUSH) {
+    var tempCanvas = getTempCanvasFor(canvas, true);
+    drawBrush(tempCanvas, drawPoints, color, brushWidth);
+  } else {
+    var strokeStyle = color;
+    var lastPosition = drawPoints[drawPoints.length - 1];
+    ctx.moveTo(lastPosition.x, lastPosition.y);
+
+    if (brushType == ERASER) {
+      ctx.globalCompositeOperation = 'destination-out';
+      strokeStyle = 'black';
+    }
+
+    ctx.lineWidth = brushWidth;
+    ctx.strokeStyle = strokeStyle;
+    ctx.lineTo(pos.x, pos.y);
+    ctx.stroke();
+  }
+
   return pos;
+}
+
+function drawBrush(canvas, drawPoints, color, brushWidth) {
+  var ctx = canvas.getContext('2d');
+  ctx.lineWidth = brushWidth;
+  ctx.lineJoin = 'round';
+  ctx.lineCap = 'round';
+  ctx.strokeStyle = color;
+  clearCanvas(canvas);
+  var p1 = drawPoints[0];
+  ctx.moveTo(p1.x, p1.y);
+  var p2 = drawPoints[1];
+
+  for (var i = 1, len = drawPoints.length; i < len; i++) {
+    var middle = midPoint(p1, p2);
+    ctx.quadraticCurveTo(p1.x, p1.y, middle.x, middle.y);
+    p1 = drawPoints[i];
+    p2 = drawPoints[i + 1];
+  }
+
+  ctx.lineTo(p1.x, p1.y);
+  ctx.stroke();
 }
 
 function getMousePos(canvas, clientX, clientY) {
@@ -24895,6 +24959,27 @@ function getMousePos(canvas, clientX, clientY) {
     x: (clientX - rect.left) * (canvas.width / rect.width),
     y: (clientY - rect.top) * (canvas.height / rect.height)
   };
+}
+
+function midPoint(p1, p2) {
+  return {
+    x: p1.x + (p2.x - p1.x) / 2,
+    y: p1.y + (p2.y - p1.y) / 2
+  };
+}
+
+function cloneCanvas(oldCanvas) {
+  //create a new canvas
+  var newCanvas = document.createElement('canvas');
+  newCanvas.setAttribute('style', 'pointer-events:none; position:absolute; top: 0px; left: 0px;');
+  var context = newCanvas.getContext('2d'); //set dimensions
+
+  newCanvas.width = oldCanvas.width;
+  newCanvas.height = oldCanvas.height; //apply the old canvas to the new one
+
+  context.drawImage(oldCanvas, 0, 0); //return the new canvas
+
+  return newCanvas;
 }
 
 var _default = CanvasPaint;
@@ -25030,7 +25115,7 @@ var parent = module.bundle.parent;
 if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== 'undefined') {
   var hostname = "" || location.hostname;
   var protocol = location.protocol === 'https:' ? 'wss' : 'ws';
-  var ws = new WebSocket(protocol + '://' + hostname + ':' + "60905" + '/');
+  var ws = new WebSocket(protocol + '://' + hostname + ':' + "56980" + '/');
 
   ws.onmessage = function (event) {
     var data = JSON.parse(event.data);

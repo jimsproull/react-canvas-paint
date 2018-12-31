@@ -27,8 +27,8 @@ const CanvasPaint = ({
     mode
 }) => {
     const [isDrawing, setIsDrawing] = useState(false);
-    const [lastPosition, setLastPosition] = useState(undefined);
     const [lastMode, setLastMode] = useState(mode);
+    const [drawPoints, setDrawPoints] = useState([]);
     const canvas = useRef(null);
     useEffect(() => {
         if (mode != lastMode && canvas.current) {
@@ -46,18 +46,26 @@ const CanvasPaint = ({
             height={height}
             onMouseDown={e => {
                 setIsDrawing(true);
-                onMouseDown(e);
+                onMouseDown(e, setDrawPoints);
             }}
-            onMouseMove={e =>
-                isDrawing &&
-                setLastPosition(
-                    onMouseMove(e, brushType, brushWidth, color, lastPosition)
-                )
-            }
+            onMouseMove={e => {
+                if (isDrawing) {
+                    const currentPosition = onMouseMove(
+                        e.target,
+                        e.clientX,
+                        e.clientY,
+                        drawPoints,
+                        brushType,
+                        brushWidth,
+                        color
+                    );
+                    setDrawPoints([...drawPoints, currentPosition]);
+                }
+            }}
             onMouseUp={e => {
                 setIsDrawing(false);
-                setLastPosition(undefined);
                 onMouseUp(e);
+                setDrawPoints([]);
             }}
         />
     );
@@ -74,7 +82,8 @@ CanvasPaint.propTypes = {
 };
 
 CanvasPaint.defaultProps = {
-    brushWidth: 4,
+    brushType: BRUSH,
+    brushWidth: 10,
     color: 'black',
     width: '400px',
     height: '400px'
@@ -85,41 +94,121 @@ function clearCanvas(canvas) {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 }
 
-function onMouseDown() {}
+function onMouseDown(e, setDrawPoints) {
+    setDrawPoints([getMousePos(e.target, e.clientX, e.clientY)]);
+}
 
-function onMouseUp() {}
+function onMouseUp(e) {
+    const tmpCanvas = getTempCanvasFor(e.target);
+    if (tmpCanvas) {
+        const ctx = e.target.getContext('2d');
+        ctx.drawImage(tmpCanvas, 0, 0);
+        removeTempCanvasFor(e.target);
+    }
+}
 
-function onMouseMove(e, brushType, brushWidth, color = 'red', lastPosition) {
-    const canvas = e.target;
-    const pos = getMousePos(canvas, e.clientX, e.clientY);
+function getTempCanvasFor(canvas, init) {
+    if (init && !canvas._tmpCanvas) {
+        canvas._tmpCanvas = cloneCanvas(canvas);
+        canvas.parentNode.insertBefore(canvas._tmpCanvas, canvas.nextSibling);
+    }
+    return canvas._tmpCanvas;
+}
+
+function removeTempCanvasFor(canvas) {
+    const tmpCanvas = getTempCanvasFor(canvas);
+    tmpCanvas && tmpCanvas.remove();
+    canvas._tmpCanvas = null;
+}
+
+function onMouseMove(
+    canvas,
+    x,
+    y,
+    drawPoints,
+    brushType,
+    brushWidth,
+    color = 'red'
+) {
+    const pos = getMousePos(canvas, x, y);
+    const ctx = canvas.getContext('2d');
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.beginPath();
+
+    if (brushType == BRUSH) {
+        const tempCanvas = getTempCanvasFor(canvas, true);
+        drawBrush(tempCanvas, drawPoints, color, brushWidth);
+    } else {
+        let strokeStyle = color;
+        const lastPosition = drawPoints[drawPoints.length - 1];
+        ctx.moveTo(lastPosition.x, lastPosition.y);
+        if (brushType == ERASER) {
+            ctx.globalCompositeOperation = 'destination-out';
+            strokeStyle = 'black';
+        }
+        ctx.lineWidth = brushWidth;
+        ctx.strokeStyle = strokeStyle;
+        ctx.lineTo(pos.x, pos.y);
+        ctx.stroke();
+    }
+    return pos;
+}
+
+function drawBrush(canvas, drawPoints, color, brushWidth) {
     const ctx = canvas.getContext('2d');
     ctx.lineWidth = brushWidth;
-    let strokeStyle = color;
-    ctx.globalCompositeOperation = 'source-over';
-    if (brushType == BRUSH) {
-        strokeStyle = color;
-    } else if (brushType == ERASER) {
-        ctx.globalCompositeOperation = 'destination-out';
-        strokeStyle = 'black';
+    ctx.lineJoin = 'round';
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = color;
+
+    clearCanvas(canvas);
+
+    let p1 = drawPoints[0];
+    ctx.moveTo(p1.x, p1.y);
+    let p2 = drawPoints[1];
+    for (let i = 1, len = drawPoints.length; i < len; i++) {
+        const middle = midPoint(p1, p2);
+        ctx.quadraticCurveTo(p1.x, p1.y, middle.x, middle.y);
+        p1 = drawPoints[i];
+        p2 = drawPoints[i + 1];
     }
-    ctx.strokeStyle = strokeStyle;
-    ctx.beginPath();
-    ctx.moveTo(
-        (lastPosition && lastPosition.x) || pos.x,
-        (lastPosition && lastPosition.y) || pos.y
-    );
-    ctx.lineTo(pos.x, pos.y);
+    ctx.lineTo(p1.x, p1.y);
     ctx.stroke();
-    return pos;
 }
 
 function getMousePos(canvas, clientX, clientY) {
     var rect = canvas.getBoundingClientRect();
-
     return {
         x: (clientX - rect.left) * (canvas.width / rect.width),
         y: (clientY - rect.top) * (canvas.height / rect.height)
     };
+}
+
+function midPoint(p1, p2) {
+    return {
+        x: p1.x + (p2.x - p1.x) / 2,
+        y: p1.y + (p2.y - p1.y) / 2
+    };
+}
+
+function cloneCanvas(oldCanvas) {
+    //create a new canvas
+    var newCanvas = document.createElement('canvas');
+    newCanvas.setAttribute(
+        'style',
+        'pointer-events:none; position:absolute; top: 0px; left: 0px;'
+    );
+    var context = newCanvas.getContext('2d');
+
+    //set dimensions
+    newCanvas.width = oldCanvas.width;
+    newCanvas.height = oldCanvas.height;
+
+    //apply the old canvas to the new one
+    context.drawImage(oldCanvas, 0, 0);
+
+    //return the new canvas
+    return newCanvas;
 }
 
 export default CanvasPaint;
