@@ -1,0 +1,31 @@
+{
+  "name": "react-canvas-paint",
+  "version": "1.0.0",
+  "description": "A simple canvas paint tool",
+  "main": "index.js",
+  "dependencies": {
+    "autoprefixer": "^9.4.3",
+    "eslint-config-google": "^0.11.0",
+    "prop-types": "^15.6.2",
+    "react": "^16.7.0-alpha.0",
+    "react-dom": "^16.7.0-alpha.0",
+    "src": "^1.1.2"
+  },
+  "devDependencies": {
+    "eslint": "^5.11.0",
+    "eslint-config-airbnb": "^17.1.0",
+    "eslint-config-standard": "^12.0.0",
+    "eslint-plugin-import": "^2.14.0",
+    "eslint-plugin-jsx-a11y": "^6.1.2",
+    "eslint-plugin-node": "^8.0.0",
+    "eslint-plugin-promise": "^4.0.1",
+    "eslint-plugin-react": "^7.11.1",
+    "eslint-plugin-standard": "^4.0.0",
+    "postcss-modules": "^1.4.1"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "MIT"
+}
