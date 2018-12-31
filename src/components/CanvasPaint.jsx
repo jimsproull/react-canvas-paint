@@ -133,12 +133,13 @@ function onMouseMove(
     const pos = getMousePos(canvas, x, y);
     const ctx = canvas.getContext('2d');
     ctx.globalCompositeOperation = 'source-over';
-    ctx.beginPath();
 
     if (brushType == BRUSH) {
         const tempCanvas = getTempCanvasFor(canvas, true);
         drawBrush(tempCanvas, drawPoints, color, brushWidth);
     } else {
+        ctx.beginPath();
+
         let strokeStyle = color;
         const lastPosition = drawPoints[drawPoints.length - 1];
         ctx.moveTo(lastPosition.x, lastPosition.y);
@@ -155,17 +156,18 @@ function onMouseMove(
 }
 
 function drawBrush(canvas, drawPoints, color, brushWidth) {
+    clearCanvas(canvas);
+
     const ctx = canvas.getContext('2d');
     ctx.lineWidth = brushWidth;
     ctx.lineJoin = 'round';
     ctx.lineCap = 'round';
     ctx.strokeStyle = color;
 
-    clearCanvas(canvas);
-
     let p1 = drawPoints[0];
-    ctx.moveTo(p1.x, p1.y);
     let p2 = drawPoints[1];
+    ctx.beginPath();
+    ctx.moveTo(p1.x, p1.y);
     for (let i = 1, len = drawPoints.length; i < len; i++) {
         const middle = midPoint(p1, p2);
         ctx.quadraticCurveTo(p1.x, p1.y, middle.x, middle.y);

@@ -24907,12 +24907,12 @@ function _onMouseMove(canvas, x, y, drawPoints, brushType, brushWidth) {
   var pos = getMousePos(canvas, x, y);
   var ctx = canvas.getContext('2d');
   ctx.globalCompositeOperation = 'source-over';
-  ctx.beginPath();
 
   if (brushType == BRUSH) {
     var tempCanvas = getTempCanvasFor(canvas, true);
     drawBrush(tempCanvas, drawPoints, color, brushWidth);
   } else {
+    ctx.beginPath();
     var strokeStyle = color;
     var lastPosition = drawPoints[drawPoints.length - 1];
     ctx.moveTo(lastPosition.x, lastPosition.y);
@@ -24932,15 +24932,16 @@ function _onMouseMove(canvas, x, y, drawPoints, brushType, brushWidth) {
 }
 
 function drawBrush(canvas, drawPoints, color, brushWidth) {
+  clearCanvas(canvas);
   var ctx = canvas.getContext('2d');
   ctx.lineWidth = brushWidth;
   ctx.lineJoin = 'round';
   ctx.lineCap = 'round';
   ctx.strokeStyle = color;
-  clearCanvas(canvas);
   var p1 = drawPoints[0];
-  ctx.moveTo(p1.x, p1.y);
   var p2 = drawPoints[1];
+  ctx.beginPath();
+  ctx.moveTo(p1.x, p1.y);
 
   for (var i = 1, len = drawPoints.length; i < len; i++) {
     var middle = midPoint(p1, p2);
