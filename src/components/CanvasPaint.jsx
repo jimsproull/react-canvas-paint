@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { CanvasPaint as styles } from './CanvasPaint.css';
 import PropTypes from 'prop-types';
 import { getMousePos, drawBrush, drawLine } from '../draw';
-import { getTempCanvasFor, removeTempCanvasFor, clearCanvas } from '../canvas';
+import { clearCanvas } from '../canvas';
 import { BRUSHES, MODES } from '../constants';
 
 const CanvasPaint = ({
@@ -14,17 +14,49 @@ const CanvasPaint = ({
     mode
 }) => {
     const [isDrawing, setIsDrawing] = useState(false);
+    const [hasDrawn, setHasDrawn] = useState(false);
     const [lastMode, setLastMode] = useState(mode);
     const [drawPoints, setDrawPoints] = useState([]);
+    const [undoStack, setUndoStack] = useState([]);
+    const [undoIndex, setUndoIndex] = useState(-1);
+
     const canvasRef = useRef(null);
     useEffect(() => {
         if (mode != lastMode && canvasRef.current) {
-            if (mode == MODES.CLEAR) {
+            switch (mode) {
+            case MODES.CLEAR: {
                 clearCanvas(canvasRef.current);
+                break;
+            }
+            case MODES.UNDO: {
+                const undoData = undoStack[undoIndex - 1];
+                if (undoData) {
+                    drawImageData(canvasRef.current, undoData);
+                    setUndoIndex(undoIndex - 1);
+                }
+                break;
+            }
+            case MODES.REDO: {
+                const redoData = undoStack[undoIndex + 1];
+                if (redoData) {
+                    drawImageData(canvasRef.current, redoData);
+                    setUndoIndex(undoIndex + 1);
+                }
+            }
             }
             setLastMode(mode);
         }
     });
+
+    // todo make this a hook
+    const addToUndoStack = newImageData => {
+        const newStack = [...undoStack];
+        newStack.length = undoIndex + 1; // truncate
+        newStack.push(newImageData);
+        setUndoStack(newStack);
+        setUndoIndex(undoIndex + 1);
+    };
+
     return (
         <canvas
             className={styles}
@@ -33,10 +65,16 @@ const CanvasPaint = ({
             height={height}
             onMouseDown={e => {
                 setIsDrawing(true);
-                onMouseDown(e, setDrawPoints);
+                setDrawPoints([getMousePos(e.target, e.clientX, e.clientY)]);
+                // todo - this only should be done once we start moving /shrug/
+                e.target._originalPixelData = getImageData(e.target);
             }}
             onMouseMove={e => {
                 if (isDrawing) {
+                    if (!hasDrawn && !undoStack.length) {
+                        addToUndoStack(e.target._originalPixelData);
+                    }
+                    setHasDrawn(true);
                     const currentPosition = getMousePos(
                         canvasRef.current,
                         e.clientX,
@@ -45,7 +83,7 @@ const CanvasPaint = ({
 
                     const newDrawPoints = [...drawPoints, currentPosition];
                     setDrawPoints(newDrawPoints);
-                    onMouseMove(
+                    doDraw(
                         e.target,
                         newDrawPoints,
                         brushType,
@@ -55,8 +93,13 @@ const CanvasPaint = ({
                 }
             }}
             onMouseUp={e => {
+                if (hasDrawn) {
+                    const newImageData = getImageData(e.target);
+                    addToUndoStack(newImageData);
+                    e.target._originalPixelData = null;
+                }
                 setIsDrawing(false);
-                onMouseUp(e);
+                setHasDrawn(false);
                 setDrawPoints([]);
             }}
         />
@@ -64,6 +107,8 @@ const CanvasPaint = ({
 };
 
 CanvasPaint.propTypes = {
+    undo: PropTypes.number,
+    redo: PropTypes.number,
     clear: PropTypes.bool,
     brushType: PropTypes.oneOf(Object.values(BRUSHES)),
     color: PropTypes.string,
@@ -81,32 +126,29 @@ CanvasPaint.defaultProps = {
     height: '400px'
 };
 
-function onMouseDown(e, setDrawPoints) {
-    setDrawPoints([getMousePos(e.target, e.clientX, e.clientY)]);
-}
-
-function onMouseUp(e) {
-    const tmpCanvas = getTempCanvasFor(e.target);
-    if (tmpCanvas) {
-        const ctx = e.target.getContext('2d');
-        ctx.drawImage(tmpCanvas, 0, 0);
-        removeTempCanvasFor(e.target);
-    }
-}
-
-function onMouseMove(canvas, drawPoints, brushType, brushWidth, color = 'red') {
+function doDraw(canvas, drawPoints, brushType, brushWidth, color = 'red') {
     const ctx = canvas.getContext('2d');
     ctx.globalCompositeOperation = 'source-over';
 
     if (brushType == BRUSHES.BRUSH) {
-        const tempCanvas = getTempCanvasFor(canvas, true);
-        drawBrush(tempCanvas, drawPoints, color, brushWidth);
+        const originalPixelData = canvas._originalPixelData;
+        drawBrush(canvas, originalPixelData, drawPoints, color, brushWidth);
     } else if (brushType == BRUSHES.ERASER) {
         ctx.globalCompositeOperation = 'destination-out';
         drawLine(canvas, drawPoints, 'black', brushWidth);
     } else {
         drawLine(canvas, drawPoints, color, brushWidth);
     }
+}
+
+function drawImageData(canvas, imageData) {
+    const ctx = canvas.getContext('2d');
+    return ctx.putImageData(imageData, 0, 0);
+}
+
+function getImageData(canvas) {
+    const ctx = canvas.getContext('2d');
+    return ctx.getImageData(0, 0, canvas.width, canvas.height);
 }
 
 export default CanvasPaint;

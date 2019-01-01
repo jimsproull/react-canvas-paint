@@ -9,7 +9,11 @@ export const BRUSHES = {
 
 const CLEAR = 'clear';
 const DRAW = 'draw';
+const UNDO = 'undo';
+const REDO = 'redo';
 export const MODES = {
     CLEAR,
-    DRAW
+    DRAW,
+    UNDO,
+    REDO
 };

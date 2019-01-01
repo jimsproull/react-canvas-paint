@@ -1,5 +1,3 @@
-import { clearCanvas } from './canvas';
-
 export function drawLine(canvas, drawPoints, color, brushWidth) {
     const ctx = canvas.getContext('2d');
     ctx.beginPath();
@@ -17,10 +15,15 @@ export function drawLine(canvas, drawPoints, color, brushWidth) {
     ctx.stroke();
 }
 
-export function drawBrush(canvas, drawPoints, color, brushWidth) {
-    clearCanvas(canvas);
-
+export function drawBrush(
+    canvas,
+    originalPixelData,
+    drawPoints,
+    color,
+    brushWidth
+) {
     const ctx = canvas.getContext('2d');
+    ctx.putImageData(originalPixelData, 0, 0);
     ctx.lineWidth = brushWidth;
     ctx.lineJoin = 'round';
     ctx.lineCap = 'round';

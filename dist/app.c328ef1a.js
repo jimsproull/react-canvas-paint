@@ -298,7 +298,7 @@ function checkPropTypes(typeSpecs, values, location, componentName, getStack) {
 
 module.exports = checkPropTypes;
 },{"./lib/ReactPropTypesSecret":"node_modules/prop-types/lib/ReactPropTypesSecret.js"}],"node_modules/react/cjs/react.development.js":[function(require,module,exports) {
-/** @license React v16.7.0-alpha.0
+/** @license React v16.7.0
  * react.development.js
  *
  * Copyright (c) Facebook, Inc. and its affiliates.
@@ -317,7 +317,7 @@ if ("development" !== "production") {
     var checkPropTypes = require('prop-types/checkPropTypes'); // TODO: this is special because it gets imported during build.
 
 
-    var ReactVersion = '16.7.0-alpha.0'; // The Symbol used to tag the ReactElement-like types. If there is no native Symbol
+    var ReactVersion = '16.7.0'; // The Symbol used to tag the ReactElement-like types. If there is no native Symbol
     // nor polyfill, then a plain number is used for performance.
 
     var hasSymbol = typeof Symbol === 'function' && Symbol.for;
@@ -350,7 +350,7 @@ if ("development" !== "production") {
       return null;
     }
 
-    var enableHooks = true; // Helps identify side effects in begin-phase lifecycle hooks and setState reducers:
+    var enableHooks = false; // Helps identify side effects in begin-phase lifecycle hooks and setState reducers:
     // In some cases, StrictMode should also double-render lifecycles.
     // This can be confusing for tests though,
     // And it can be bad for performance in production.
@@ -361,13 +361,15 @@ if ("development" !== "production") {
     // Gather advanced timing metrics for Profiler subtrees.
     // Trace which interactions trigger each commit.
     // Only used in www builds.
+    // TODO: true? Here it might just be false.
+    // Only used in www builds.
     // Only used in www builds.
     // React Fire: prevent the value and checked attributes from syncing
     // with their related DOM properties
     // These APIs will no longer be "unstable" in the upcoming 16.7 release,
     // Control this behavior with a flag to support 16.6 minor releases in the meanwhile.
 
-    var enableStableConcurrentModeAPIs = true;
+    var enableStableConcurrentModeAPIs = false;
     /**
      * Use invariant() to assert state which your program assumes to be true.
      *
@@ -497,61 +499,13 @@ if ("development" !== "production") {
         }
 
         if (typeof console !== 'undefined') {
-          var _args$map = args.map(function (item) {
+          var argsWithFormat = args.map(function (item) {
             return '' + item;
-          }),
-              a = _args$map[0],
-              b = _args$map[1],
-              c = _args$map[2],
-              d = _args$map[3],
-              e = _args$map[4],
-              f = _args$map[5],
-              g = _args$map[6],
-              h = _args$map[7];
+          });
+          argsWithFormat.unshift('Warning: ' + format); // We intentionally don't use spread (or .apply) directly because it
+          // breaks IE9: https://github.com/facebook/react/issues/13610
 
-          var message = 'Warning: ' + format; // We intentionally don't use spread (or .apply) because it breaks IE9:
-          // https://github.com/facebook/react/issues/13610
-
-          switch (args.length) {
-            case 0:
-              console.error(message);
-              break;
-
-            case 1:
-              console.error(message, a);
-              break;
-
-            case 2:
-              console.error(message, a, b);
-              break;
-
-            case 3:
-              console.error(message, a, b, c);
-              break;
-
-            case 4:
-              console.error(message, a, b, c, d);
-              break;
-
-            case 5:
-              console.error(message, a, b, c, d, e);
-              break;
-
-            case 6:
-              console.error(message, a, b, c, d, e, f);
-              break;
-
-            case 7:
-              console.error(message, a, b, c, d, e, f, g);
-              break;
-
-            case 8:
-              console.error(message, a, b, c, d, e, f, g, h);
-              break;
-
-            default:
-              throw new Error('warningWithoutStack() currently supports at most 8 arguments.');
-          }
+          Function.prototype.apply.call(console.error, console, argsWithFormat);
         }
 
         try {
@@ -559,12 +513,10 @@ if ("development" !== "production") {
           // This error was thrown as a convenience so that you can use this stack
           // to find the callsite that caused this warning to fire.
           var argIndex = 0;
-
-          var _message = 'Warning: ' + format.replace(/%s/g, function () {
+          var message = 'Warning: ' + format.replace(/%s/g, function () {
             return args[argIndex++];
           });
-
-          throw new Error(_message);
+          throw new Error(message);
         } catch (x) {}
       };
     }
@@ -1655,6 +1607,9 @@ if ("development" !== "production") {
         // Secondary renderers store their context values on separate fields.
         _currentValue: defaultValue,
         _currentValue2: defaultValue,
+        // Used to track how many concurrent renderers this context currently
+        // supports within in a single renderer. Such as parallel server rendering.
+        _threadCount: 0,
         // These are circular
         Provider: null,
         Consumer: null
@@ -1705,6 +1660,14 @@ if ("development" !== "production") {
               context._currentValue2 = _currentValue2;
             }
           },
+          _threadCount: {
+            get: function () {
+              return context._threadCount;
+            },
+            set: function (_threadCount) {
+              context._threadCount = _threadCount;
+            }
+          },
           Consumer: {
             get: function () {
               if (!hasWarnedAboutUsingNestedContextConsumers) {
@@ -1727,18 +1690,56 @@ if ("development" !== "production") {
     }
 
     function lazy(ctor) {
-      return {
+      var lazyType = {
         $$typeof: REACT_LAZY_TYPE,
         _ctor: ctor,
         // React uses these fields to store the result.
         _status: -1,
         _result: null
       };
+      {
+        // In production, this would just set it on the object.
+        var defaultProps = void 0;
+        var propTypes = void 0;
+        Object.defineProperties(lazyType, {
+          defaultProps: {
+            configurable: true,
+            get: function () {
+              return defaultProps;
+            },
+            set: function (newDefaultProps) {
+              warning$1(false, 'React.lazy(...): It is not supported to assign `defaultProps` to ' + 'a lazy component import. Either specify them where the component ' + 'is defined, or create a wrapping component around it.');
+              defaultProps = newDefaultProps; // Match production behavior more closely:
+
+              Object.defineProperty(lazyType, 'defaultProps', {
+                enumerable: true
+              });
+            }
+          },
+          propTypes: {
+            configurable: true,
+            get: function () {
+              return propTypes;
+            },
+            set: function (newPropTypes) {
+              warning$1(false, 'React.lazy(...): It is not supported to assign `propTypes` to ' + 'a lazy component import. Either specify them where the component ' + 'is defined, or create a wrapping component around it.');
+              propTypes = newPropTypes; // Match production behavior more closely:
+
+              Object.defineProperty(lazyType, 'propTypes', {
+                enumerable: true
+              });
+            }
+          }
+        });
+      }
+      return lazyType;
     }
 
     function forwardRef(render) {
       {
-        if (typeof render !== 'function') {
+        if (render != null && render.$$typeof === REACT_MEMO_TYPE) {
+          warningWithoutStack$1(false, 'forwardRef requires a render function but received a `memo` ' + 'component. Instead of forwardRef(memo(...)), use ' + 'memo(forwardRef(...)).');
+        } else if (typeof render !== 'function') {
           warningWithoutStack$1(false, 'forwardRef requires a render function but was given %s.', render === null ? 'null' : typeof render);
         } else {
           !( // Do not warn for 0 arguments because it could be due to usage of the 'arguments' object
@@ -1815,11 +1816,6 @@ if ("development" !== "production") {
     function useEffect(create, inputs) {
       var dispatcher = resolveDispatcher();
       return dispatcher.useEffect(create, inputs);
-    }
-
-    function useMutationEffect(create, inputs) {
-      var dispatcher = resolveDispatcher();
-      return dispatcher.useMutationEffect(create, inputs);
     }
 
     function useLayoutEffect(create, inputs) {
@@ -1998,17 +1994,19 @@ if ("development" !== "production") {
 
     function validatePropTypes(element) {
       var type = element.type;
-      var name = void 0,
-          propTypes = void 0;
+
+      if (type === null || type === undefined || typeof type === 'string') {
+        return;
+      }
+
+      var name = getComponentName(type);
+      var propTypes = void 0;
 
       if (typeof type === 'function') {
-        // Class or function component
-        name = type.displayName || type.name;
         propTypes = type.propTypes;
-      } else if (typeof type === 'object' && type !== null && type.$$typeof === REACT_FORWARD_REF_TYPE) {
-        // ForwardRef
-        var functionName = type.render.displayName || type.render.name || '';
-        name = type.displayName || (functionName !== '' ? 'ForwardRef(' + functionName + ')' : 'ForwardRef');
+      } else if (typeof type === 'object' && (type.$$typeof === REACT_FORWARD_REF_TYPE || // Note: Memo only checks outer props here.
+      // Inner props are checked in the reconciler.
+      type.$$typeof === REACT_MEMO_TYPE)) {
         propTypes = type.propTypes;
       } else {
         return;
@@ -2168,15 +2166,19 @@ if ("development" !== "production") {
       createFactory: createFactoryWithValidation,
       isValidElement: isValidElement,
       version: ReactVersion,
+      unstable_ConcurrentMode: REACT_CONCURRENT_MODE_TYPE,
+      unstable_Profiler: REACT_PROFILER_TYPE,
       __SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED: ReactSharedInternals
-    };
+    }; // Note: some APIs are added with feature flags.
+    // Make sure that stable builds for open source
+    // don't modify the React object to avoid deopts.
+    // Also let's not expose their names in stable builds.
 
     if (enableStableConcurrentModeAPIs) {
       React.ConcurrentMode = REACT_CONCURRENT_MODE_TYPE;
       React.Profiler = REACT_PROFILER_TYPE;
-    } else {
-      React.unstable_ConcurrentMode = REACT_CONCURRENT_MODE_TYPE;
-      React.unstable_Profiler = REACT_PROFILER_TYPE;
+      React.unstable_ConcurrentMode = undefined;
+      React.unstable_Profiler = undefined;
     }
 
     if (enableHooks) {
@@ -2186,7 +2188,6 @@ if ("development" !== "production") {
       React.useImperativeMethods = useImperativeMethods;
       React.useLayoutEffect = useLayoutEffect;
       React.useMemo = useMemo;
-      React.useMutationEffect = useMutationEffect;
       React.useReducer = useReducer;
       React.useRef = useRef;
       React.useState = useState;
@@ -24738,46 +24739,7 @@ if ("development" !== 'production') {
   // http://fb.me/prop-types-in-prod
   module.exports = require('./factoryWithThrowingShims')();
 }
-},{"./factoryWithTypeCheckers":"node_modules/prop-types/factoryWithTypeCheckers.js"}],"src/canvas.js":[function(require,module,exports) {
-"use strict";
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-exports.clearCanvas = clearCanvas;
-exports.getTempCanvasFor = getTempCanvasFor;
-exports.removeTempCanvasFor = removeTempCanvasFor;
-
-function clearCanvas(canvas) {
-  var ctx = canvas.getContext('2d');
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-}
-
-function getTempCanvasFor(canvas, init) {
-  if (init && !canvas._tmpCanvas) {
-    canvas._tmpCanvas = cloneCanvas(canvas);
-    canvas.parentNode.insertBefore(canvas._tmpCanvas, canvas.nextSibling);
-  }
-
-  return canvas._tmpCanvas;
-}
-
-function removeTempCanvasFor(canvas) {
-  var tmpCanvas = getTempCanvasFor(canvas);
-  tmpCanvas && tmpCanvas.remove();
-  canvas._tmpCanvas = null;
-}
-
-function cloneCanvas(oldCanvas) {
-  var newCanvas = document.createElement('canvas');
-  newCanvas.setAttribute('style', 'pointer-events:none; position:absolute; top: 0px; left: 0px;');
-  var context = newCanvas.getContext('2d');
-  newCanvas.width = oldCanvas.width;
-  newCanvas.height = oldCanvas.height;
-  context.drawImage(oldCanvas, 0, 0);
-  return newCanvas;
-}
-},{}],"src/draw.js":[function(require,module,exports) {
+},{"./factoryWithTypeCheckers":"node_modules/prop-types/factoryWithTypeCheckers.js"}],"src/draw.js":[function(require,module,exports) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -24786,8 +24748,6 @@ Object.defineProperty(exports, "__esModule", {
 exports.drawLine = drawLine;
 exports.drawBrush = drawBrush;
 exports.getMousePos = getMousePos;
-
-var _canvas = require("./canvas");
 
 function drawLine(canvas, drawPoints, color, brushWidth) {
   var ctx = canvas.getContext('2d');
@@ -24801,9 +24761,9 @@ function drawLine(canvas, drawPoints, color, brushWidth) {
   ctx.stroke();
 }
 
-function drawBrush(canvas, drawPoints, color, brushWidth) {
-  (0, _canvas.clearCanvas)(canvas);
+function drawBrush(canvas, originalPixelData, drawPoints, color, brushWidth) {
   var ctx = canvas.getContext('2d');
+  ctx.putImageData(originalPixelData, 0, 0);
   ctx.lineWidth = brushWidth;
   ctx.lineJoin = 'round';
   ctx.lineCap = 'round';
@@ -24838,7 +24798,42 @@ function midPoint(p1, p2) {
     y: p1.y + (p2.y - p1.y) / 2
   };
 }
-},{"./canvas":"src/canvas.js"}],"src/constants.js":[function(require,module,exports) {
+},{}],"src/canvas.js":[function(require,module,exports) {
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.clearCanvas = clearCanvas;
+
+function clearCanvas(canvas) {
+  var ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+} // export function getTempCanvasFor(canvas, init) {
+//     if (init && !canvas._tmpCanvas) {
+//         canvas._tmpCanvas = cloneCanvas(canvas);
+//         canvas.parentNode.insertBefore(canvas._tmpCanvas, canvas.nextSibling);
+//     }
+//     return canvas._tmpCanvas;
+// }
+// export function removeTempCanvasFor(canvas) {
+//     const tmpCanvas = getTempCanvasFor(canvas);
+//     tmpCanvas && tmpCanvas.remove();
+//     canvas._tmpCanvas = null;
+// }
+// function cloneCanvas(oldCanvas) {
+//     const newCanvas = document.createElement('canvas');
+//     newCanvas.setAttribute(
+//         'style',
+//         'pointer-events:none; position:absolute; top: 0px; left: 0px;'
+//     );
+//     const context = newCanvas.getContext('2d');
+//     newCanvas.width = oldCanvas.width;
+//     newCanvas.height = oldCanvas.height;
+//     context.drawImage(oldCanvas, 0, 0);
+//     return newCanvas;
+// }
+},{}],"src/constants.js":[function(require,module,exports) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -24856,9 +24851,13 @@ var BRUSHES = {
 exports.BRUSHES = BRUSHES;
 var CLEAR = 'clear';
 var DRAW = 'draw';
+var UNDO = 'undo';
+var REDO = 'redo';
 var MODES = {
   CLEAR: CLEAR,
-  DRAW: DRAW
+  DRAW: DRAW,
+  UNDO: UNDO,
+  REDO: REDO
 };
 exports.MODES = MODES;
 },{}],"src/components/CanvasPaint.jsx":[function(require,module,exports) {
@@ -24916,26 +24915,78 @@ var CanvasPaint = function CanvasPaint(_ref) {
       isDrawing = _useState2[0],
       setIsDrawing = _useState2[1];
 
-  var _useState3 = (0, _react.useState)(mode),
+  var _useState3 = (0, _react.useState)(false),
       _useState4 = _slicedToArray(_useState3, 2),
-      lastMode = _useState4[0],
-      setLastMode = _useState4[1];
+      hasDrawn = _useState4[0],
+      setHasDrawn = _useState4[1];
 
-  var _useState5 = (0, _react.useState)([]),
+  var _useState5 = (0, _react.useState)(mode),
       _useState6 = _slicedToArray(_useState5, 2),
-      drawPoints = _useState6[0],
-      setDrawPoints = _useState6[1];
+      lastMode = _useState6[0],
+      setLastMode = _useState6[1];
+
+  var _useState7 = (0, _react.useState)([]),
+      _useState8 = _slicedToArray(_useState7, 2),
+      drawPoints = _useState8[0],
+      setDrawPoints = _useState8[1];
+
+  var _useState9 = (0, _react.useState)([]),
+      _useState10 = _slicedToArray(_useState9, 2),
+      undoStack = _useState10[0],
+      setUndoStack = _useState10[1];
+
+  var _useState11 = (0, _react.useState)(-1),
+      _useState12 = _slicedToArray(_useState11, 2),
+      undoIndex = _useState12[0],
+      setUndoIndex = _useState12[1];
 
   var canvasRef = (0, _react.useRef)(null);
   (0, _react.useEffect)(function () {
     if (mode != lastMode && canvasRef.current) {
-      if (mode == _constants.MODES.CLEAR) {
-        (0, _canvas.clearCanvas)(canvasRef.current);
+      switch (mode) {
+        case _constants.MODES.CLEAR:
+          {
+            (0, _canvas.clearCanvas)(canvasRef.current);
+            break;
+          }
+
+        case _constants.MODES.UNDO:
+          {
+            var undoData = undoStack[undoIndex - 1];
+
+            if (undoData) {
+              drawImageData(canvasRef.current, undoData);
+              setUndoIndex(undoIndex - 1);
+            }
+
+            break;
+          }
+
+        case _constants.MODES.REDO:
+          {
+            var redoData = undoStack[undoIndex + 1];
+
+            if (redoData) {
+              drawImageData(canvasRef.current, redoData);
+              setUndoIndex(undoIndex + 1);
+            }
+          }
       }
 
       setLastMode(mode);
     }
-  });
+  }); // todo make this a hook
+
+  var addToUndoStack = function addToUndoStack(newImageData) {
+    var newStack = _toConsumableArray(undoStack);
+
+    newStack.length = undoIndex + 1; // truncate
+
+    newStack.push(newImageData);
+    setUndoStack(newStack);
+    setUndoIndex(undoIndex + 1);
+  };
+
   return _react.default.createElement("canvas", {
     className: _CanvasPaint.CanvasPaint,
     ref: canvasRef,
@@ -24943,29 +24994,40 @@ var CanvasPaint = function CanvasPaint(_ref) {
     height: height,
     onMouseDown: function onMouseDown(e) {
       setIsDrawing(true);
+      setDrawPoints([(0, _draw.getMousePos)(e.target, e.clientX, e.clientY)]); // todo - this only should be done once we start moving /shrug/
 
-      _onMouseDown(e, setDrawPoints);
+      e.target._originalPixelData = getImageData(e.target);
     },
     onMouseMove: function onMouseMove(e) {
       if (isDrawing) {
+        if (!hasDrawn && !undoStack.length) {
+          addToUndoStack(e.target._originalPixelData);
+        }
+
+        setHasDrawn(true);
         var currentPosition = (0, _draw.getMousePos)(canvasRef.current, e.clientX, e.clientY);
         var newDrawPoints = [].concat(_toConsumableArray(drawPoints), [currentPosition]);
         setDrawPoints(newDrawPoints);
-
-        _onMouseMove(e.target, newDrawPoints, brushType, brushWidth, color);
+        doDraw(e.target, newDrawPoints, brushType, brushWidth, color);
       }
     },
     onMouseUp: function onMouseUp(e) {
+      if (hasDrawn) {
+        var newImageData = getImageData(e.target);
+        addToUndoStack(newImageData);
+        e.target._originalPixelData = null;
+      }
+
       setIsDrawing(false);
-
-      _onMouseUp(e);
-
+      setHasDrawn(false);
       setDrawPoints([]);
     }
   });
 };
 
 CanvasPaint.propTypes = {
+  undo: _propTypes.default.number,
+  redo: _propTypes.default.number,
   clear: _propTypes.default.bool,
   brushType: _propTypes.default.oneOf(Object.values(_constants.BRUSHES)),
   color: _propTypes.default.string,
@@ -24982,34 +25044,30 @@ CanvasPaint.defaultProps = {
   height: '400px'
 };
 
-function _onMouseDown(e, setDrawPoints) {
-  setDrawPoints([(0, _draw.getMousePos)(e.target, e.clientX, e.clientY)]);
-}
-
-function _onMouseUp(e) {
-  var tmpCanvas = (0, _canvas.getTempCanvasFor)(e.target);
-
-  if (tmpCanvas) {
-    var ctx = e.target.getContext('2d');
-    ctx.drawImage(tmpCanvas, 0, 0);
-    (0, _canvas.removeTempCanvasFor)(e.target);
-  }
-}
-
-function _onMouseMove(canvas, drawPoints, brushType, brushWidth) {
+function doDraw(canvas, drawPoints, brushType, brushWidth) {
   var color = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : 'red';
   var ctx = canvas.getContext('2d');
   ctx.globalCompositeOperation = 'source-over';
 
   if (brushType == _constants.BRUSHES.BRUSH) {
-    var tempCanvas = (0, _canvas.getTempCanvasFor)(canvas, true);
-    (0, _draw.drawBrush)(tempCanvas, drawPoints, color, brushWidth);
+    var originalPixelData = canvas._originalPixelData;
+    (0, _draw.drawBrush)(canvas, originalPixelData, drawPoints, color, brushWidth);
   } else if (brushType == _constants.BRUSHES.ERASER) {
     ctx.globalCompositeOperation = 'destination-out';
     (0, _draw.drawLine)(canvas, drawPoints, 'black', brushWidth);
   } else {
     (0, _draw.drawLine)(canvas, drawPoints, color, brushWidth);
   }
+}
+
+function drawImageData(canvas, imageData) {
+  var ctx = canvas.getContext('2d');
+  return ctx.putImageData(imageData, 0, 0);
+}
+
+function getImageData(canvas) {
+  var ctx = canvas.getContext('2d');
+  return ctx.getImageData(0, 0, canvas.width, canvas.height);
 }
 
 var _default = CanvasPaint;
@@ -25036,6 +25094,7 @@ function _iterableToArrayLimit(arr, i) { var _arr = []; var _n = true; var _d = 
 
 function _arrayWithHoles(arr) { if (Array.isArray(arr)) return arr; }
 
+// import KeyboardEventHandler from 'react-keyboard-event-handler';
 var PENCIL = 'pencil';
 exports.PENCIL = PENCIL;
 var BRUSH = 'brush';
@@ -25081,17 +25140,23 @@ var CanvasPaintKeyboard = function CanvasPaintKeyboard(_ref) {
       return setBrushType(_constants.BRUSHES.PENCIL);
     }
   };
+  var metaKeys = {
+    z: function z() {
+      return setMode(_constants.MODES.UNDO);
+    }
+  };
   var keydownEvents = [];
 
   function onKeyDown(e) {
+    console.log('down', e);
     keydownEvents.push(e);
   }
 
-  function onKeyUp() {
-    var containsShift = !!keydownEvents.filter(function (e) {
-      return e.shiftKey;
-    }).length;
+  function onKeyUp(e) {
+    console.log('up', e);
     var lastKeyEvent = keydownEvents[keydownEvents.length - 1];
+    var containsShift = lastKeyEvent.shiftKey;
+    var containsMeta = lastKeyEvent.metaKey;
 
     if (lastKeyEvent) {
       var key = lastKeyEvent.keyCode;
@@ -25101,6 +25166,8 @@ var CanvasPaintKeyboard = function CanvasPaintKeyboard(_ref) {
         setBrushWidth(number);
       } else if (colors[number]) {
         setColor(colors[number]);
+      } else if (containsMeta && metaKeys[lastKeyEvent.key]) {
+        metaKeys[lastKeyEvent.key]();
       } else if (keys[lastKeyEvent.key]) {
         keys[lastKeyEvent.key]();
       }
@@ -25110,20 +25177,27 @@ var CanvasPaintKeyboard = function CanvasPaintKeyboard(_ref) {
     setMode(_constants.MODES.DRAW);
   }
 
-  (0, _react.useEffect)(function () {
-    document.addEventListener('keydown', onKeyDown);
-    document.addEventListener('keyup', onKeyUp);
-    return function () {
-      document.removeEventListener('keydown', onKeyDown);
-      document.removeEventListener('keyup', onKeyUp);
-    };
+  (0, _react.useEffect)(function () {// document.addEventListener('keydown', onKeyDown);
+    // document.addEventListener('keyup', onKeyUp);
+    // return () => {
+    //     document.removeEventListener('keydown', onKeyDown);
+    //     document.removeEventListener('keyup', onKeyUp);
+    // };
   });
-  return _react.default.cloneElement(children, {
+
+  var clonedChildren = _react.default.cloneElement(children, {
     color: color,
     mode: mode,
     brushType: brushType,
     brushWidth: brushWidth
   });
+
+  return _react.default.createElement(_react.default.Fragment, null, _react.default.createElement(KeyboardEventHandler, {
+    handleKeys: ['a', 'b', 'c'],
+    onKeyEvent: function onKeyEvent(key, e) {
+      return console.log("do something upon keydown event of ".concat(key));
+    }
+  }), clonedChildren, ");");
 };
 
 var _default = CanvasPaintKeyboard;

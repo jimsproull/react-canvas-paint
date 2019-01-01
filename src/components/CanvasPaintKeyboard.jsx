@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { MODES, BRUSHES } from '../constants';
+// import KeyboardEventHandler from 'react-keyboard-event-handler';
 
 export const PENCIL = 'pencil';
 export const BRUSH = 'brush';
@@ -19,14 +20,22 @@ const CanvasPaintKeyboard = ({ children }) => {
         p: () => setBrushType(BRUSHES.PENCIL)
     };
 
+    const metaKeys = {
+        z: () => setMode(MODES.UNDO)
+    };
+
     let keydownEvents = [];
     function onKeyDown(e) {
+        console.log('down', e);
         keydownEvents.push(e);
     }
 
-    function onKeyUp() {
-        const containsShift = !!keydownEvents.filter(e => e.shiftKey).length;
+    function onKeyUp(e) {
+        console.log('up', e);
         const lastKeyEvent = keydownEvents[keydownEvents.length - 1];
+        const containsShift = lastKeyEvent.shiftKey;
+        const containsMeta = lastKeyEvent.metaKey;
+
         if (lastKeyEvent) {
             const key = lastKeyEvent.keyCode;
             const number = Number(key) - 48; // number 0 starts at 48 ASCII
@@ -34,6 +43,8 @@ const CanvasPaintKeyboard = ({ children }) => {
                 setBrushWidth(number);
             } else if (colors[number]) {
                 setColor(colors[number]);
+            } else if (containsMeta && metaKeys[lastKeyEvent.key]) {
+                metaKeys[lastKeyEvent.key]();
             } else if (keys[lastKeyEvent.key]) {
                 keys[lastKeyEvent.key]();
             }
@@ -44,15 +55,33 @@ const CanvasPaintKeyboard = ({ children }) => {
     }
 
     useEffect(() => {
-        document.addEventListener('keydown', onKeyDown);
-        document.addEventListener('keyup', onKeyUp);
-        return () => {
-            document.removeEventListener('keydown', onKeyDown);
-            document.removeEventListener('keyup', onKeyUp);
-        };
+        // document.addEventListener('keydown', onKeyDown);
+        // document.addEventListener('keyup', onKeyUp);
+        // return () => {
+        //     document.removeEventListener('keydown', onKeyDown);
+        //     document.removeEventListener('keyup', onKeyUp);
+        // };
     });
 
-    return React.cloneElement(children, { color, mode, brushType, brushWidth });
+    const clonedChildren = React.cloneElement(children, {
+        color,
+        mode,
+        brushType,
+        brushWidth
+    });
+
+    return (
+        <React.Fragment>
+            <KeyboardEventHandler
+                handleKeys={['a', 'b', 'c']}
+                onKeyEvent={(key, e) =>
+                    console.log(`do something upon keydown event of ${key}`)
+                }
+            />
+            {clonedChildren}
+            );
+        </React.Fragment>
+    );
 };
 
 export default CanvasPaintKeyboard;
