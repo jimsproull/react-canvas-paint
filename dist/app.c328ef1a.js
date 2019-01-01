@@ -24838,13 +24838,36 @@ function midPoint(p1, p2) {
     y: p1.y + (p2.y - p1.y) / 2
   };
 }
-},{"./canvas":"src/canvas.js"}],"src/components/CanvasPaint.jsx":[function(require,module,exports) {
+},{"./canvas":"src/canvas.js"}],"src/constants.js":[function(require,module,exports) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.default = exports.BRUSHES = exports.MODES = void 0;
+exports.MODES = exports.BRUSHES = void 0;
+var PENCIL = 'pencil';
+var BRUSH = 'brush';
+var ERASER = 'eraser';
+var BRUSHES = {
+  PENCIL: PENCIL,
+  BRUSH: BRUSH,
+  ERASER: ERASER
+};
+exports.BRUSHES = BRUSHES;
+var CLEAR = 'clear';
+var DRAW = 'draw';
+var MODES = {
+  CLEAR: CLEAR,
+  DRAW: DRAW
+};
+exports.MODES = MODES;
+},{}],"src/components/CanvasPaint.jsx":[function(require,module,exports) {
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.default = void 0;
 
 var _react = _interopRequireWildcard(require("react"));
 
@@ -24855,6 +24878,8 @@ var _propTypes = _interopRequireDefault(require("prop-types"));
 var _draw = require("../draw");
 
 var _canvas = require("../canvas");
+
+var _constants = require("../constants");
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -24875,23 +24900,6 @@ function _nonIterableRest() { throw new TypeError("Invalid attempt to destructur
 function _iterableToArrayLimit(arr, i) { var _arr = []; var _n = true; var _d = false; var _e = undefined; try { for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) { _arr.push(_s.value); if (i && _arr.length === i) break; } } catch (err) { _d = true; _e = err; } finally { try { if (!_n && _i["return"] != null) _i["return"](); } finally { if (_d) throw _e; } } return _arr; }
 
 function _arrayWithHoles(arr) { if (Array.isArray(arr)) return arr; }
-
-var PENCIL = 'pencil';
-var BRUSH = 'brush';
-var ERASER = 'eraser';
-var CLEAR = 'clear';
-var DRAW = 'draw';
-var MODES = {
-  CLEAR: CLEAR,
-  DRAW: DRAW
-};
-exports.MODES = MODES;
-var BRUSHES = {
-  PENCIL: PENCIL,
-  BRUSH: BRUSH,
-  ERASER: ERASER
-};
-exports.BRUSHES = BRUSHES;
 
 var CanvasPaint = function CanvasPaint(_ref) {
   var brushType = _ref.brushType,
@@ -24921,7 +24929,7 @@ var CanvasPaint = function CanvasPaint(_ref) {
   var canvasRef = (0, _react.useRef)(null);
   (0, _react.useEffect)(function () {
     if (mode != lastMode && canvasRef.current) {
-      if (mode == CLEAR) {
+      if (mode == _constants.MODES.CLEAR) {
         (0, _canvas.clearCanvas)(canvasRef.current);
       }
 
@@ -24959,15 +24967,15 @@ var CanvasPaint = function CanvasPaint(_ref) {
 
 CanvasPaint.propTypes = {
   clear: _propTypes.default.bool,
-  brushType: _propTypes.default.oneOf(Object.values(BRUSHES)),
+  brushType: _propTypes.default.oneOf(Object.values(_constants.BRUSHES)),
   color: _propTypes.default.string,
   width: _propTypes.default.string,
   height: _propTypes.default.string,
-  mode: _propTypes.default.oneOf(Object.values(MODES)),
+  mode: _propTypes.default.oneOf(Object.values(_constants.MODES)),
   brushWidth: _propTypes.default.number
 };
 CanvasPaint.defaultProps = {
-  brushType: BRUSH,
+  brushType: _constants.BRUSHES.BRUSH,
   brushWidth: 10,
   color: 'black',
   width: '400px',
@@ -24993,10 +25001,10 @@ function _onMouseMove(canvas, drawPoints, brushType, brushWidth) {
   var ctx = canvas.getContext('2d');
   ctx.globalCompositeOperation = 'source-over';
 
-  if (brushType == BRUSH) {
+  if (brushType == _constants.BRUSHES.BRUSH) {
     var tempCanvas = (0, _canvas.getTempCanvasFor)(canvas, true);
     (0, _draw.drawBrush)(tempCanvas, drawPoints, color, brushWidth);
-  } else if (brushType == ERASER) {
+  } else if (brushType == _constants.BRUSHES.ERASER) {
     ctx.globalCompositeOperation = 'destination-out';
     (0, _draw.drawLine)(canvas, drawPoints, 'black', brushWidth);
   } else {
@@ -25006,7 +25014,7 @@ function _onMouseMove(canvas, drawPoints, brushType, brushWidth) {
 
 var _default = CanvasPaint;
 exports.default = _default;
-},{"react":"node_modules/react/index.js","./CanvasPaint.css":"src/components/CanvasPaint.css","prop-types":"node_modules/prop-types/index.js","../draw":"src/draw.js","../canvas":"src/canvas.js"}],"src/components/CanvasPaintKeyboard.jsx":[function(require,module,exports) {
+},{"react":"node_modules/react/index.js","./CanvasPaint.css":"src/components/CanvasPaint.css","prop-types":"node_modules/prop-types/index.js","../draw":"src/draw.js","../canvas":"src/canvas.js","../constants":"src/constants.js"}],"src/components/CanvasPaintKeyboard.jsx":[function(require,module,exports) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -25016,7 +25024,7 @@ exports.default = exports.ERASER = exports.BRUSH = exports.PENCIL = void 0;
 
 var _react = _interopRequireWildcard(require("react"));
 
-var _CanvasPaint = require("./CanvasPaint");
+var _constants = require("../constants");
 
 function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) { var desc = Object.defineProperty && Object.getOwnPropertyDescriptor ? Object.getOwnPropertyDescriptor(obj, key) : {}; if (desc.get || desc.set) { Object.defineProperty(newObj, key, desc); } else { newObj[key] = obj[key]; } } } } newObj.default = obj; return newObj; } }
 
@@ -25061,16 +25069,16 @@ var CanvasPaintKeyboard = function CanvasPaintKeyboard(_ref) {
 
   var keys = {
     c: function c() {
-      return setMode(_CanvasPaint.MODES.CLEAR);
+      return setMode(_constants.MODES.CLEAR);
     },
     e: function e() {
-      return setBrushType(_CanvasPaint.BRUSHES.ERASER);
+      return setBrushType(_constants.BRUSHES.ERASER);
     },
     b: function b() {
-      return setBrushType(_CanvasPaint.BRUSHES.BRUSH);
+      return setBrushType(_constants.BRUSHES.BRUSH);
     },
     p: function p() {
-      return setBrushType(_CanvasPaint.BRUSHES.PENCIL);
+      return setBrushType(_constants.BRUSHES.PENCIL);
     }
   };
   var keydownEvents = [];
@@ -25099,7 +25107,7 @@ var CanvasPaintKeyboard = function CanvasPaintKeyboard(_ref) {
     }
 
     keydownEvents = [];
-    setMode(_CanvasPaint.MODES.DRAW);
+    setMode(_constants.MODES.DRAW);
   }
 
   (0, _react.useEffect)(function () {
@@ -25120,7 +25128,7 @@ var CanvasPaintKeyboard = function CanvasPaintKeyboard(_ref) {
 
 var _default = CanvasPaintKeyboard;
 exports.default = _default;
-},{"react":"node_modules/react/index.js","./CanvasPaint":"src/components/CanvasPaint.jsx"}],"app.js":[function(require,module,exports) {
+},{"react":"node_modules/react/index.js","../constants":"src/constants.js"}],"app.js":[function(require,module,exports) {
 "use strict";
 
 var _react = _interopRequireDefault(require("react"));

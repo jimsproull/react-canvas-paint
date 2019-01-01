@@ -3,22 +3,7 @@ import { CanvasPaint as styles } from './CanvasPaint.css';
 import PropTypes from 'prop-types';
 import { getMousePos, drawBrush, drawLine } from '../draw';
 import { getTempCanvasFor, removeTempCanvasFor, clearCanvas } from '../canvas';
-
-const PENCIL = 'pencil';
-const BRUSH = 'brush';
-const ERASER = 'eraser';
-
-const CLEAR = 'clear';
-const DRAW = 'draw';
-export const MODES = {
-    CLEAR,
-    DRAW
-};
-export const BRUSHES = {
-    PENCIL,
-    BRUSH,
-    ERASER
-};
+import { BRUSHES, MODES } from '../constants';
 
 const CanvasPaint = ({
     brushType,
@@ -34,7 +19,7 @@ const CanvasPaint = ({
     const canvasRef = useRef(null);
     useEffect(() => {
         if (mode != lastMode && canvasRef.current) {
-            if (mode == CLEAR) {
+            if (mode == MODES.CLEAR) {
                 clearCanvas(canvasRef.current);
             }
             setLastMode(mode);
@@ -89,7 +74,7 @@ CanvasPaint.propTypes = {
 };
 
 CanvasPaint.defaultProps = {
-    brushType: BRUSH,
+    brushType: BRUSHES.BRUSH,
     brushWidth: 10,
     color: 'black',
     width: '400px',
@@ -113,10 +98,10 @@ function onMouseMove(canvas, drawPoints, brushType, brushWidth, color = 'red') {
     const ctx = canvas.getContext('2d');
     ctx.globalCompositeOperation = 'source-over';
 
-    if (brushType == BRUSH) {
+    if (brushType == BRUSHES.BRUSH) {
         const tempCanvas = getTempCanvasFor(canvas, true);
         drawBrush(tempCanvas, drawPoints, color, brushWidth);
-    } else if (brushType == ERASER) {
+    } else if (brushType == BRUSHES.ERASER) {
         ctx.globalCompositeOperation = 'destination-out';
         drawLine(canvas, drawPoints, 'black', brushWidth);
     } else {
