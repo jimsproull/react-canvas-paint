@@ -24738,7 +24738,107 @@ if ("development" !== 'production') {
   // http://fb.me/prop-types-in-prod
   module.exports = require('./factoryWithThrowingShims')();
 }
-},{"./factoryWithTypeCheckers":"node_modules/prop-types/factoryWithTypeCheckers.js"}],"src/components/CanvasPaint.jsx":[function(require,module,exports) {
+},{"./factoryWithTypeCheckers":"node_modules/prop-types/factoryWithTypeCheckers.js"}],"src/canvas.js":[function(require,module,exports) {
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.clearCanvas = clearCanvas;
+exports.getTempCanvasFor = getTempCanvasFor;
+exports.removeTempCanvasFor = removeTempCanvasFor;
+
+function clearCanvas(canvas) {
+  var ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+}
+
+function getTempCanvasFor(canvas, init) {
+  if (init && !canvas._tmpCanvas) {
+    canvas._tmpCanvas = cloneCanvas(canvas);
+    canvas.parentNode.insertBefore(canvas._tmpCanvas, canvas.nextSibling);
+  }
+
+  return canvas._tmpCanvas;
+}
+
+function removeTempCanvasFor(canvas) {
+  var tmpCanvas = getTempCanvasFor(canvas);
+  tmpCanvas && tmpCanvas.remove();
+  canvas._tmpCanvas = null;
+}
+
+function cloneCanvas(oldCanvas) {
+  var newCanvas = document.createElement('canvas');
+  newCanvas.setAttribute('style', 'pointer-events:none; position:absolute; top: 0px; left: 0px;');
+  var context = newCanvas.getContext('2d');
+  newCanvas.width = oldCanvas.width;
+  newCanvas.height = oldCanvas.height;
+  context.drawImage(oldCanvas, 0, 0);
+  return newCanvas;
+}
+},{}],"src/draw.js":[function(require,module,exports) {
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.drawLine = drawLine;
+exports.drawBrush = drawBrush;
+exports.getMousePos = getMousePos;
+
+var _canvas = require("./canvas");
+
+function drawLine(canvas, drawPoints, color, brushWidth) {
+  var ctx = canvas.getContext('2d');
+  ctx.beginPath();
+  var strokeStyle = color;
+  var lastPosition = drawPoints[drawPoints.length - 2];
+  ctx.moveTo(lastPosition.x, lastPosition.y);
+  ctx.lineWidth = brushWidth;
+  ctx.strokeStyle = strokeStyle;
+  ctx.lineTo(drawPoints[drawPoints.length - 1].x, drawPoints[drawPoints.length - 1].y);
+  ctx.stroke();
+}
+
+function drawBrush(canvas, drawPoints, color, brushWidth) {
+  (0, _canvas.clearCanvas)(canvas);
+  var ctx = canvas.getContext('2d');
+  ctx.lineWidth = brushWidth;
+  ctx.lineJoin = 'round';
+  ctx.lineCap = 'round';
+  ctx.strokeStyle = color;
+  var p1 = drawPoints[0];
+  var p2 = drawPoints[1];
+  ctx.beginPath();
+  ctx.moveTo(p1.x, p1.y);
+
+  for (var i = 1, len = drawPoints.length; i < len; i++) {
+    var middle = midPoint(p1, p2);
+    ctx.quadraticCurveTo(p1.x, p1.y, middle.x, middle.y);
+    p1 = drawPoints[i];
+    p2 = drawPoints[i + 1];
+  }
+
+  ctx.lineTo(p1.x, p1.y);
+  ctx.stroke();
+}
+
+function getMousePos(canvas, clientX, clientY) {
+  var rect = canvas.getBoundingClientRect();
+  return {
+    x: (clientX - rect.left) * (canvas.width / rect.width),
+    y: (clientY - rect.top) * (canvas.height / rect.height)
+  };
+}
+
+function midPoint(p1, p2) {
+  return {
+    x: p1.x + (p2.x - p1.x) / 2,
+    y: p1.y + (p2.y - p1.y) / 2
+  };
+}
+},{"./canvas":"src/canvas.js"}],"src/components/CanvasPaint.jsx":[function(require,module,exports) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -24751,6 +24851,10 @@ var _react = _interopRequireWildcard(require("react"));
 var _CanvasPaint = require("./CanvasPaint.css");
 
 var _propTypes = _interopRequireDefault(require("prop-types"));
+
+var _draw = require("../draw");
+
+var _canvas = require("../canvas");
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -24818,7 +24922,7 @@ var CanvasPaint = function CanvasPaint(_ref) {
   (0, _react.useEffect)(function () {
     if (mode != lastMode && canvasRef.current) {
       if (mode == CLEAR) {
-        clearCanvas(canvasRef.current);
+        (0, _canvas.clearCanvas)(canvasRef.current);
       }
 
       setLastMode(mode);
@@ -24836,7 +24940,7 @@ var CanvasPaint = function CanvasPaint(_ref) {
     },
     onMouseMove: function onMouseMove(e) {
       if (isDrawing) {
-        var currentPosition = getMousePos(canvasRef.current, e.clientX, e.clientY);
+        var currentPosition = (0, _draw.getMousePos)(canvasRef.current, e.clientX, e.clientY);
         var newDrawPoints = [].concat(_toConsumableArray(drawPoints), [currentPosition]);
         setDrawPoints(newDrawPoints);
 
@@ -24870,38 +24974,18 @@ CanvasPaint.defaultProps = {
   height: '400px'
 };
 
-function clearCanvas(canvas) {
-  var ctx = canvas.getContext('2d');
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-}
-
 function _onMouseDown(e, setDrawPoints) {
-  setDrawPoints([getMousePos(e.target, e.clientX, e.clientY)]);
+  setDrawPoints([(0, _draw.getMousePos)(e.target, e.clientX, e.clientY)]);
 }
 
 function _onMouseUp(e) {
-  var tmpCanvas = getTempCanvasFor(e.target);
+  var tmpCanvas = (0, _canvas.getTempCanvasFor)(e.target);
 
   if (tmpCanvas) {
     var ctx = e.target.getContext('2d');
     ctx.drawImage(tmpCanvas, 0, 0);
-    removeTempCanvasFor(e.target);
+    (0, _canvas.removeTempCanvasFor)(e.target);
   }
-}
-
-function getTempCanvasFor(canvas, init) {
-  if (init && !canvas._tmpCanvas) {
-    canvas._tmpCanvas = cloneCanvas(canvas);
-    canvas.parentNode.insertBefore(canvas._tmpCanvas, canvas.nextSibling);
-  }
-
-  return canvas._tmpCanvas;
-}
-
-function removeTempCanvasFor(canvas) {
-  var tmpCanvas = getTempCanvasFor(canvas);
-  tmpCanvas && tmpCanvas.remove();
-  canvas._tmpCanvas = null;
 }
 
 function _onMouseMove(canvas, drawPoints, brushType, brushWidth) {
@@ -24910,93 +24994,19 @@ function _onMouseMove(canvas, drawPoints, brushType, brushWidth) {
   ctx.globalCompositeOperation = 'source-over';
 
   if (brushType == BRUSH) {
-    var tempCanvas = getTempCanvasFor(canvas, true);
-    drawBrush(tempCanvas, drawPoints, color, brushWidth);
+    var tempCanvas = (0, _canvas.getTempCanvasFor)(canvas, true);
+    (0, _draw.drawBrush)(tempCanvas, drawPoints, color, brushWidth);
   } else if (brushType == ERASER) {
     ctx.globalCompositeOperation = 'destination-out';
-    drawLine(canvas, drawPoints, 'black', brushWidth); // ctx.beginPath();
-    // let strokeStyle = color;
-    // const lastPosition = drawPoints[drawPoints.length - 2];
-    // ctx.moveTo(lastPosition.x, lastPosition.y);
-    // if (brushType == ERASER) {
-    //     ctx.globalCompositeOperation = 'destination-out';
-    //     strokeStyle = 'black';
-    // }
-    // ctx.lineWidth = brushWidth;
-    // ctx.strokeStyle = strokeStyle;
-    // ctx.lineTo(
-    //     drawPoints[drawPoints.length - 1].x,
-    //     drawPoints[drawPoints.length - 1].y
-    // );
-    // ctx.stroke();
+    (0, _draw.drawLine)(canvas, drawPoints, 'black', brushWidth);
   } else {
-    drawLine(canvas, drawPoints, color, brushWidth);
+    (0, _draw.drawLine)(canvas, drawPoints, color, brushWidth);
   }
-}
-
-function drawLine(canvas, drawPoints, color, brushWidth) {
-  var ctx = canvas.getContext('2d');
-  ctx.beginPath();
-  var strokeStyle = color;
-  var lastPosition = drawPoints[drawPoints.length - 2];
-  ctx.moveTo(lastPosition.x, lastPosition.y);
-  ctx.lineWidth = brushWidth;
-  ctx.strokeStyle = strokeStyle;
-  ctx.lineTo(drawPoints[drawPoints.length - 1].x, drawPoints[drawPoints.length - 1].y);
-  ctx.stroke();
-}
-
-function drawBrush(canvas, drawPoints, color, brushWidth) {
-  clearCanvas(canvas);
-  var ctx = canvas.getContext('2d');
-  ctx.lineWidth = brushWidth;
-  ctx.lineJoin = 'round';
-  ctx.lineCap = 'round';
-  ctx.strokeStyle = color;
-  var p1 = drawPoints[0];
-  var p2 = drawPoints[1];
-  ctx.beginPath();
-  ctx.moveTo(p1.x, p1.y);
-
-  for (var i = 1, len = drawPoints.length; i < len; i++) {
-    var middle = midPoint(p1, p2);
-    ctx.quadraticCurveTo(p1.x, p1.y, middle.x, middle.y);
-    p1 = drawPoints[i];
-    p2 = drawPoints[i + 1];
-  }
-
-  ctx.lineTo(p1.x, p1.y);
-  ctx.stroke();
-}
-
-function getMousePos(canvas, clientX, clientY) {
-  var rect = canvas.getBoundingClientRect();
-  return {
-    x: (clientX - rect.left) * (canvas.width / rect.width),
-    y: (clientY - rect.top) * (canvas.height / rect.height)
-  };
-}
-
-function midPoint(p1, p2) {
-  return {
-    x: p1.x + (p2.x - p1.x) / 2,
-    y: p1.y + (p2.y - p1.y) / 2
-  };
-}
-
-function cloneCanvas(oldCanvas) {
-  var newCanvas = document.createElement('canvas');
-  newCanvas.setAttribute('style', 'pointer-events:none; position:absolute; top: 0px; left: 0px;');
-  var context = newCanvas.getContext('2d');
-  newCanvas.width = oldCanvas.width;
-  newCanvas.height = oldCanvas.height;
-  context.drawImage(oldCanvas, 0, 0);
-  return newCanvas;
 }
 
 var _default = CanvasPaint;
 exports.default = _default;
-},{"react":"node_modules/react/index.js","./CanvasPaint.css":"src/components/CanvasPaint.css","prop-types":"node_modules/prop-types/index.js"}],"src/components/CanvasPaintKeyboard.jsx":[function(require,module,exports) {
+},{"react":"node_modules/react/index.js","./CanvasPaint.css":"src/components/CanvasPaint.css","prop-types":"node_modules/prop-types/index.js","../draw":"src/draw.js","../canvas":"src/canvas.js"}],"src/components/CanvasPaintKeyboard.jsx":[function(require,module,exports) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
