@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { MODES, BRUSHES } from '../constants';
-// import KeyboardEventHandler from 'react-keyboard-event-handler';
 
 export const PENCIL = 'pencil';
 export const BRUSH = 'brush';
@@ -21,67 +20,52 @@ const CanvasPaintKeyboard = ({ children }) => {
     };
 
     const metaKeys = {
-        z: () => setMode(MODES.UNDO)
+        z: (metaKey, shiftKey) =>
+            metaKey && shiftKey ? setMode(MODES.REDO) : setMode(MODES.UNDO)
     };
 
-    let keydownEvents = [];
+    let keyEvent;
     function onKeyDown(e) {
-        console.log('down', e);
-        keydownEvents.push(e);
+        if (
+            (e.metaKey && e.key === 'Meta') ||
+            (e.shiftKey && e.key === 'Shift')
+        ) {
+            return;
+        }
+        keyEvent = e;
+        handleKeyEvent();
     }
 
-    function onKeyUp(e) {
-        console.log('up', e);
-        const lastKeyEvent = keydownEvents[keydownEvents.length - 1];
-        const containsShift = lastKeyEvent.shiftKey;
-        const containsMeta = lastKeyEvent.metaKey;
+    function handleKeyEvent() {
+        if (keyEvent) {
+            const containsShift = keyEvent.shiftKey;
+            const containsMeta = keyEvent.metaKey;
 
-        if (lastKeyEvent) {
-            const key = lastKeyEvent.keyCode;
+            const key = keyEvent.keyCode;
             const number = Number(key) - 48; // number 0 starts at 48 ASCII
-            if (number && containsShift) {
+            if ((containsMeta || containsShift) && metaKeys[keyEvent.key]) {
+                metaKeys[keyEvent.key](containsMeta, containsShift);
+            } else if (number && containsShift) {
                 setBrushWidth(number);
             } else if (colors[number]) {
                 setColor(colors[number]);
-            } else if (containsMeta && metaKeys[lastKeyEvent.key]) {
-                metaKeys[lastKeyEvent.key]();
-            } else if (keys[lastKeyEvent.key]) {
-                keys[lastKeyEvent.key]();
+            } else if (keys[keyEvent.key]) {
+                keys[keyEvent.key]();
             }
-        }
 
-        keydownEvents = [];
-        setMode(MODES.DRAW);
+            setMode(MODES.DRAW);
+        }
+        keyEvent = null;
     }
 
     useEffect(() => {
-        // document.addEventListener('keydown', onKeyDown);
-        // document.addEventListener('keyup', onKeyUp);
-        // return () => {
-        //     document.removeEventListener('keydown', onKeyDown);
-        //     document.removeEventListener('keyup', onKeyUp);
-        // };
+        document.addEventListener('keydown', onKeyDown);
+        return () => {
+            document.removeEventListener('keydown', onKeyDown);
+        };
     });
 
-    const clonedChildren = React.cloneElement(children, {
-        color,
-        mode,
-        brushType,
-        brushWidth
-    });
-
-    return (
-        <React.Fragment>
-            <KeyboardEventHandler
-                handleKeys={['a', 'b', 'c']}
-                onKeyEvent={(key, e) =>
-                    console.log(`do something upon keydown event of ${key}`)
-                }
-            />
-            {clonedChildren}
-            );
-        </React.Fragment>
-    );
+    return React.cloneElement(children, { color, mode, brushType, brushWidth });
 };
 
 export default CanvasPaintKeyboard;

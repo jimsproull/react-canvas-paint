@@ -4,7 +4,7 @@
   "description": "A simple canvas paint tool",
   "main": "index.js",
   "dependencies": {
-    "react": "^16.7.0",
+    "react": "^16.7.0-alpha.0",
     "react-dom": "^16.7.0-alpha.0",
     "src": "^1.1.2"
   },
@@ -18,8 +18,7 @@
     "eslint-plugin-react": "^7.11.1",
     "eslint-plugin-standard": "^4.0.0",
     "postcss-modules": "^1.4.1",
-    "prop-types": "^15.6.2",
-    "react-keyboard-event-handler": "^1.4.1"
+    "prop-types": "^15.6.2"
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"

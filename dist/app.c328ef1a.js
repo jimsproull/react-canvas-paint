@@ -298,7 +298,7 @@ function checkPropTypes(typeSpecs, values, location, componentName, getStack) {
 
 module.exports = checkPropTypes;
 },{"./lib/ReactPropTypesSecret":"node_modules/prop-types/lib/ReactPropTypesSecret.js"}],"node_modules/react/cjs/react.development.js":[function(require,module,exports) {
-/** @license React v16.7.0
+/** @license React v16.7.0-alpha.0
  * react.development.js
  *
  * Copyright (c) Facebook, Inc. and its affiliates.
@@ -317,7 +317,7 @@ if ("development" !== "production") {
     var checkPropTypes = require('prop-types/checkPropTypes'); // TODO: this is special because it gets imported during build.
 
 
-    var ReactVersion = '16.7.0'; // The Symbol used to tag the ReactElement-like types. If there is no native Symbol
+    var ReactVersion = '16.7.0-alpha.0'; // The Symbol used to tag the ReactElement-like types. If there is no native Symbol
     // nor polyfill, then a plain number is used for performance.
 
     var hasSymbol = typeof Symbol === 'function' && Symbol.for;
@@ -350,7 +350,7 @@ if ("development" !== "production") {
       return null;
     }
 
-    var enableHooks = false; // Helps identify side effects in begin-phase lifecycle hooks and setState reducers:
+    var enableHooks = true; // Helps identify side effects in begin-phase lifecycle hooks and setState reducers:
     // In some cases, StrictMode should also double-render lifecycles.
     // This can be confusing for tests though,
     // And it can be bad for performance in production.
@@ -361,15 +361,13 @@ if ("development" !== "production") {
     // Gather advanced timing metrics for Profiler subtrees.
     // Trace which interactions trigger each commit.
     // Only used in www builds.
-    // TODO: true? Here it might just be false.
-    // Only used in www builds.
     // Only used in www builds.
     // React Fire: prevent the value and checked attributes from syncing
     // with their related DOM properties
     // These APIs will no longer be "unstable" in the upcoming 16.7 release,
     // Control this behavior with a flag to support 16.6 minor releases in the meanwhile.
 
-    var enableStableConcurrentModeAPIs = false;
+    var enableStableConcurrentModeAPIs = true;
     /**
      * Use invariant() to assert state which your program assumes to be true.
      *
@@ -499,13 +497,61 @@ if ("development" !== "production") {
         }
 
         if (typeof console !== 'undefined') {
-          var argsWithFormat = args.map(function (item) {
+          var _args$map = args.map(function (item) {
             return '' + item;
-          });
-          argsWithFormat.unshift('Warning: ' + format); // We intentionally don't use spread (or .apply) directly because it
-          // breaks IE9: https://github.com/facebook/react/issues/13610
+          }),
+              a = _args$map[0],
+              b = _args$map[1],
+              c = _args$map[2],
+              d = _args$map[3],
+              e = _args$map[4],
+              f = _args$map[5],
+              g = _args$map[6],
+              h = _args$map[7];
 
-          Function.prototype.apply.call(console.error, console, argsWithFormat);
+          var message = 'Warning: ' + format; // We intentionally don't use spread (or .apply) because it breaks IE9:
+          // https://github.com/facebook/react/issues/13610
+
+          switch (args.length) {
+            case 0:
+              console.error(message);
+              break;
+
+            case 1:
+              console.error(message, a);
+              break;
+
+            case 2:
+              console.error(message, a, b);
+              break;
+
+            case 3:
+              console.error(message, a, b, c);
+              break;
+
+            case 4:
+              console.error(message, a, b, c, d);
+              break;
+
+            case 5:
+              console.error(message, a, b, c, d, e);
+              break;
+
+            case 6:
+              console.error(message, a, b, c, d, e, f);
+              break;
+
+            case 7:
+              console.error(message, a, b, c, d, e, f, g);
+              break;
+
+            case 8:
+              console.error(message, a, b, c, d, e, f, g, h);
+              break;
+
+            default:
+              throw new Error('warningWithoutStack() currently supports at most 8 arguments.');
+          }
         }
 
         try {
@@ -513,10 +559,12 @@ if ("development" !== "production") {
           // This error was thrown as a convenience so that you can use this stack
           // to find the callsite that caused this warning to fire.
           var argIndex = 0;
-          var message = 'Warning: ' + format.replace(/%s/g, function () {
+
+          var _message = 'Warning: ' + format.replace(/%s/g, function () {
             return args[argIndex++];
           });
-          throw new Error(message);
+
+          throw new Error(_message);
         } catch (x) {}
       };
     }
@@ -1607,9 +1655,6 @@ if ("development" !== "production") {
         // Secondary renderers store their context values on separate fields.
         _currentValue: defaultValue,
         _currentValue2: defaultValue,
-        // Used to track how many concurrent renderers this context currently
-        // supports within in a single renderer. Such as parallel server rendering.
-        _threadCount: 0,
         // These are circular
         Provider: null,
         Consumer: null
@@ -1660,14 +1705,6 @@ if ("development" !== "production") {
               context._currentValue2 = _currentValue2;
             }
           },
-          _threadCount: {
-            get: function () {
-              return context._threadCount;
-            },
-            set: function (_threadCount) {
-              context._threadCount = _threadCount;
-            }
-          },
           Consumer: {
             get: function () {
               if (!hasWarnedAboutUsingNestedContextConsumers) {
@@ -1690,56 +1727,18 @@ if ("development" !== "production") {
     }
 
     function lazy(ctor) {
-      var lazyType = {
+      return {
         $$typeof: REACT_LAZY_TYPE,
         _ctor: ctor,
         // React uses these fields to store the result.
         _status: -1,
         _result: null
       };
-      {
-        // In production, this would just set it on the object.
-        var defaultProps = void 0;
-        var propTypes = void 0;
-        Object.defineProperties(lazyType, {
-          defaultProps: {
-            configurable: true,
-            get: function () {
-              return defaultProps;
-            },
-            set: function (newDefaultProps) {
-              warning$1(false, 'React.lazy(...): It is not supported to assign `defaultProps` to ' + 'a lazy component import. Either specify them where the component ' + 'is defined, or create a wrapping component around it.');
-              defaultProps = newDefaultProps; // Match production behavior more closely:
-
-              Object.defineProperty(lazyType, 'defaultProps', {
-                enumerable: true
-              });
-            }
-          },
-          propTypes: {
-            configurable: true,
-            get: function () {
-              return propTypes;
-            },
-            set: function (newPropTypes) {
-              warning$1(false, 'React.lazy(...): It is not supported to assign `propTypes` to ' + 'a lazy component import. Either specify them where the component ' + 'is defined, or create a wrapping component around it.');
-              propTypes = newPropTypes; // Match production behavior more closely:
-
-              Object.defineProperty(lazyType, 'propTypes', {
-                enumerable: true
-              });
-            }
-          }
-        });
-      }
-      return lazyType;
     }
 
     function forwardRef(render) {
       {
-        if (render != null && render.$$typeof === REACT_MEMO_TYPE) {
-          warningWithoutStack$1(false, 'forwardRef requires a render function but received a `memo` ' + 'component. Instead of forwardRef(memo(...)), use ' + 'memo(forwardRef(...)).');
-        } else if (typeof render !== 'function') {
+        if (typeof render !== 'function') {
           warningWithoutStack$1(false, 'forwardRef requires a render function but was given %s.', render === null ? 'null' : typeof render);
         } else {
           !( // Do not warn for 0 arguments because it could be due to usage of the 'arguments' object
@@ -1816,6 +1815,11 @@ if ("development" !== "production") {
     function useEffect(create, inputs) {
       var dispatcher = resolveDispatcher();
       return dispatcher.useEffect(create, inputs);
+    }
+
+    function useMutationEffect(create, inputs) {
+      var dispatcher = resolveDispatcher();
+      return dispatcher.useMutationEffect(create, inputs);
     }
 
     function useLayoutEffect(create, inputs) {
@@ -1994,19 +1998,17 @@ if ("development" !== "production") {
 
     function validatePropTypes(element) {
       var type = element.type;
-
-      if (type === null || type === undefined || typeof type === 'string') {
-        return;
-      }
-
-      var name = getComponentName(type);
-      var propTypes = void 0;
+      var name = void 0,
+          propTypes = void 0;
 
       if (typeof type === 'function') {
+        // Class or function component
+        name = type.displayName || type.name;
         propTypes = type.propTypes;
-      } else if (typeof type === 'object' && (type.$$typeof === REACT_FORWARD_REF_TYPE || // Note: Memo only checks outer props here.
-      // Inner props are checked in the reconciler.
-      type.$$typeof === REACT_MEMO_TYPE)) {
+      } else if (typeof type === 'object' && type !== null && type.$$typeof === REACT_FORWARD_REF_TYPE) {
+        // ForwardRef
+        var functionName = type.render.displayName || type.render.name || '';
+        name = type.displayName || (functionName !== '' ? 'ForwardRef(' + functionName + ')' : 'ForwardRef');
         propTypes = type.propTypes;
       } else {
         return;
@@ -2166,19 +2168,15 @@ if ("development" !== "production") {
       createFactory: createFactoryWithValidation,
       isValidElement: isValidElement,
       version: ReactVersion,
-      unstable_ConcurrentMode: REACT_CONCURRENT_MODE_TYPE,
-      unstable_Profiler: REACT_PROFILER_TYPE,
       __SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED: ReactSharedInternals
-    }; // Note: some APIs are added with feature flags.
-    // Make sure that stable builds for open source
-    // don't modify the React object to avoid deopts.
-    // Also let's not expose their names in stable builds.
+    };
 
     if (enableStableConcurrentModeAPIs) {
       React.ConcurrentMode = REACT_CONCURRENT_MODE_TYPE;
       React.Profiler = REACT_PROFILER_TYPE;
-      React.unstable_ConcurrentMode = undefined;
-      React.unstable_Profiler = undefined;
+    } else {
+      React.unstable_ConcurrentMode = REACT_CONCURRENT_MODE_TYPE;
+      React.unstable_Profiler = REACT_PROFILER_TYPE;
     }
 
     if (enableHooks) {
@@ -2188,6 +2186,7 @@ if ("development" !== "production") {
       React.useImperativeMethods = useImperativeMethods;
       React.useLayoutEffect = useLayoutEffect;
       React.useMemo = useMemo;
+      React.useMutationEffect = useMutationEffect;
       React.useReducer = useReducer;
       React.useRef = useRef;
       React.useState = useState;
@@ -25094,7 +25093,6 @@ function _iterableToArrayLimit(arr, i) { var _arr = []; var _n = true; var _d = 
 
 function _arrayWithHoles(arr) { if (Array.isArray(arr)) return arr; }
 
-// import KeyboardEventHandler from 'react-keyboard-event-handler';
 var PENCIL = 'pencil';
 exports.PENCIL = PENCIL;
 var BRUSH = 'brush';
@@ -25141,63 +25139,56 @@ var CanvasPaintKeyboard = function CanvasPaintKeyboard(_ref) {
     }
   };
   var metaKeys = {
-    z: function z() {
-      return setMode(_constants.MODES.UNDO);
+    z: function z(metaKey, shiftKey) {
+      return metaKey && shiftKey ? setMode(_constants.MODES.REDO) : setMode(_constants.MODES.UNDO);
     }
   };
-  var keydownEvents = [];
+  var keyEvent;
 
   function onKeyDown(e) {
-    console.log('down', e);
-    keydownEvents.push(e);
+    if (e.metaKey && e.key === 'Meta' || e.shiftKey && e.key === 'Shift') {
+      return;
+    }
+
+    keyEvent = e;
+    handleKeyEvent();
   }
 
-  function onKeyUp(e) {
-    console.log('up', e);
-    var lastKeyEvent = keydownEvents[keydownEvents.length - 1];
-    var containsShift = lastKeyEvent.shiftKey;
-    var containsMeta = lastKeyEvent.metaKey;
-
-    if (lastKeyEvent) {
-      var key = lastKeyEvent.keyCode;
+  function handleKeyEvent() {
+    if (keyEvent) {
+      var containsShift = keyEvent.shiftKey;
+      var containsMeta = keyEvent.metaKey;
+      var key = keyEvent.keyCode;
       var number = Number(key) - 48; // number 0 starts at 48 ASCII
 
-      if (number && containsShift) {
+      if ((containsMeta || containsShift) && metaKeys[keyEvent.key]) {
+        metaKeys[keyEvent.key](containsMeta, containsShift);
+      } else if (number && containsShift) {
         setBrushWidth(number);
       } else if (colors[number]) {
         setColor(colors[number]);
-      } else if (containsMeta && metaKeys[lastKeyEvent.key]) {
-        metaKeys[lastKeyEvent.key]();
-      } else if (keys[lastKeyEvent.key]) {
-        keys[lastKeyEvent.key]();
+      } else if (keys[keyEvent.key]) {
+        keys[keyEvent.key]();
       }
+
+      setMode(_constants.MODES.DRAW);
     }
 
-    keydownEvents = [];
-    setMode(_constants.MODES.DRAW);
+    keyEvent = null;
   }
 
-  (0, _react.useEffect)(function () {// document.addEventListener('keydown', onKeyDown);
-    // document.addEventListener('keyup', onKeyUp);
-    // return () => {
-    //     document.removeEventListener('keydown', onKeyDown);
-    //     document.removeEventListener('keyup', onKeyUp);
-    // };
+  (0, _react.useEffect)(function () {
+    document.addEventListener('keydown', onKeyDown);
+    return function () {
+      document.removeEventListener('keydown', onKeyDown);
+    };
   });
-
-  var clonedChildren = _react.default.cloneElement(children, {
+  return _react.default.cloneElement(children, {
     color: color,
     mode: mode,
     brushType: brushType,
     brushWidth: brushWidth
   });
-
-  return _react.default.createElement(_react.default.Fragment, null, _react.default.createElement(KeyboardEventHandler, {
-    handleKeys: ['a', 'b', 'c'],
-    onKeyEvent: function onKeyEvent(key, e) {
-      return console.log("do something upon keydown event of ".concat(key));
-    }
-  }), clonedChildren, ");");
 };
 
 var _default = CanvasPaintKeyboard;
