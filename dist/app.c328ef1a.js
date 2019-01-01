@@ -24837,10 +24837,10 @@ var CanvasPaint = function CanvasPaint(_ref) {
     onMouseMove: function onMouseMove(e) {
       if (isDrawing) {
         var currentPosition = getMousePos(canvasRef.current, e.clientX, e.clientY);
+        var newDrawPoints = [].concat(_toConsumableArray(drawPoints), [currentPosition]);
+        setDrawPoints(newDrawPoints);
 
-        _onMouseMove(e.target, drawPoints, brushType, brushWidth, color);
-
-        setDrawPoints([].concat(_toConsumableArray(drawPoints), [currentPosition]));
+        _onMouseMove(e.target, newDrawPoints, brushType, brushWidth, color);
       }
     },
     onMouseUp: function onMouseUp(e) {
@@ -24908,15 +24908,29 @@ function _onMouseMove(canvas, drawPoints, brushType, brushWidth) {
   var color = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : 'red';
   var ctx = canvas.getContext('2d');
   ctx.globalCompositeOperation = 'source-over';
-  var tempCanvas = getTempCanvasFor(canvas, true);
 
   if (brushType == BRUSH) {
+    var tempCanvas = getTempCanvasFor(canvas, true);
     drawBrush(tempCanvas, drawPoints, color, brushWidth);
   } else if (brushType == ERASER) {
     ctx.globalCompositeOperation = 'destination-out';
-    drawLine(tempCanvas, drawPoints, 'black', brushWidth);
+    drawLine(canvas, drawPoints, 'black', brushWidth); // ctx.beginPath();
+    // let strokeStyle = color;
+    // const lastPosition = drawPoints[drawPoints.length - 2];
+    // ctx.moveTo(lastPosition.x, lastPosition.y);
+    // if (brushType == ERASER) {
+    //     ctx.globalCompositeOperation = 'destination-out';
+    //     strokeStyle = 'black';
+    // }
+    // ctx.lineWidth = brushWidth;
+    // ctx.strokeStyle = strokeStyle;
+    // ctx.lineTo(
+    //     drawPoints[drawPoints.length - 1].x,
+    //     drawPoints[drawPoints.length - 1].y
+    // );
+    // ctx.stroke();
   } else {
-    drawLine(tempCanvas, drawPoints, color, brushWidth);
+    drawLine(canvas, drawPoints, color, brushWidth);
   }
 }
 
@@ -24924,11 +24938,11 @@ function drawLine(canvas, drawPoints, color, brushWidth) {
   var ctx = canvas.getContext('2d');
   ctx.beginPath();
   var strokeStyle = color;
-  var lastPosition = drawPoints[drawPoints.length - 1];
+  var lastPosition = drawPoints[drawPoints.length - 2];
   ctx.moveTo(lastPosition.x, lastPosition.y);
   ctx.lineWidth = brushWidth;
   ctx.strokeStyle = strokeStyle;
-  ctx.lineTo(drawPoints[0].x, drawPoints[0].y);
+  ctx.lineTo(drawPoints[drawPoints.length - 1].x, drawPoints[drawPoints.length - 1].y);
   ctx.stroke();
 }
 
@@ -25020,15 +25034,20 @@ var CanvasPaintKeyboard = function CanvasPaintKeyboard(_ref) {
       color = _useState2[0],
       setColor = _useState2[1];
 
-  var _useState3 = (0, _react.useState)(undefined),
+  var _useState3 = (0, _react.useState)(7),
       _useState4 = _slicedToArray(_useState3, 2),
-      mode = _useState4[0],
-      setMode = _useState4[1];
+      brushWidth = _useState4[0],
+      setBrushWidth = _useState4[1];
 
   var _useState5 = (0, _react.useState)(undefined),
       _useState6 = _slicedToArray(_useState5, 2),
-      brushType = _useState6[0],
-      setBrushType = _useState6[1];
+      mode = _useState6[0],
+      setMode = _useState6[1];
+
+  var _useState7 = (0, _react.useState)(undefined),
+      _useState8 = _slicedToArray(_useState7, 2),
+      brushType = _useState8[0],
+      setBrushType = _useState8[1];
 
   var keys = {
     c: function c() {
@@ -25036,20 +25055,40 @@ var CanvasPaintKeyboard = function CanvasPaintKeyboard(_ref) {
     },
     e: function e() {
       return setBrushType(_CanvasPaint.BRUSHES.ERASER);
+    },
+    b: function b() {
+      return setBrushType(_CanvasPaint.BRUSHES.BRUSH);
+    },
+    p: function p() {
+      return setBrushType(_CanvasPaint.BRUSHES.PENCIL);
     }
   };
+  var keydownEvents = [];
 
   function onKeyDown(e) {
-    var number = Number(e.key);
-
-    if (colors[number]) {
-      setColor(colors[number]);
-    } else if (keys[e.key]) {
-      keys[e.key]();
-    }
+    keydownEvents.push(e);
   }
 
   function onKeyUp() {
+    var containsShift = !!keydownEvents.filter(function (e) {
+      return e.shiftKey;
+    }).length;
+    var lastKeyEvent = keydownEvents[keydownEvents.length - 1];
+
+    if (lastKeyEvent) {
+      var key = lastKeyEvent.keyCode;
+      var number = Number(key) - 48; // number 0 starts at 48 ASCII
+
+      if (number && containsShift) {
+        setBrushWidth(number);
+      } else if (colors[number]) {
+        setColor(colors[number]);
+      } else if (keys[lastKeyEvent.key]) {
+        keys[lastKeyEvent.key]();
+      }
+    }
+
+    keydownEvents = [];
     setMode(_CanvasPaint.MODES.DRAW);
   }
 
@@ -25064,7 +25103,8 @@ var CanvasPaintKeyboard = function CanvasPaintKeyboard(_ref) {
   return _react.default.cloneElement(children, {
     color: color,
     mode: mode,
-    brushType: brushType
+    brushType: brushType,
+    brushWidth: brushWidth
   });
 };
 

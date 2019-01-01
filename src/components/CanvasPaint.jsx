@@ -55,15 +55,16 @@ const CanvasPaint = ({
                         e.clientX,
                         e.clientY
                     );
+
+                    const newDrawPoints = [...drawPoints, currentPosition];
+                    setDrawPoints(newDrawPoints);
                     onMouseMove(
                         e.target,
-                        drawPoints,
+                        newDrawPoints,
                         brushType,
                         brushWidth,
                         color
                     );
-
-                    setDrawPoints([...drawPoints, currentPosition]);
                 }
             }}
             onMouseUp={e => {
@@ -129,14 +130,30 @@ function onMouseMove(canvas, drawPoints, brushType, brushWidth, color = 'red') {
     const ctx = canvas.getContext('2d');
     ctx.globalCompositeOperation = 'source-over';
 
-    const tempCanvas = getTempCanvasFor(canvas, true);
     if (brushType == BRUSH) {
+        const tempCanvas = getTempCanvasFor(canvas, true);
         drawBrush(tempCanvas, drawPoints, color, brushWidth);
     } else if (brushType == ERASER) {
         ctx.globalCompositeOperation = 'destination-out';
-        drawLine(tempCanvas, drawPoints, 'black', brushWidth);
+        drawLine(canvas, drawPoints, 'black', brushWidth);
+        // ctx.beginPath();
+
+        // let strokeStyle = color;
+        // const lastPosition = drawPoints[drawPoints.length - 2];
+        // ctx.moveTo(lastPosition.x, lastPosition.y);
+        // if (brushType == ERASER) {
+        //     ctx.globalCompositeOperation = 'destination-out';
+        //     strokeStyle = 'black';
+        // }
+        // ctx.lineWidth = brushWidth;
+        // ctx.strokeStyle = strokeStyle;
+        // ctx.lineTo(
+        //     drawPoints[drawPoints.length - 1].x,
+        //     drawPoints[drawPoints.length - 1].y
+        // );
+        // ctx.stroke();
     } else {
-        drawLine(tempCanvas, drawPoints, color, brushWidth);
+        drawLine(canvas, drawPoints, color, brushWidth);
     }
 }
 
@@ -145,12 +162,15 @@ function drawLine(canvas, drawPoints, color, brushWidth) {
     ctx.beginPath();
 
     let strokeStyle = color;
-    const lastPosition = drawPoints[drawPoints.length - 1];
+    const lastPosition = drawPoints[drawPoints.length - 2];
     ctx.moveTo(lastPosition.x, lastPosition.y);
 
     ctx.lineWidth = brushWidth;
     ctx.strokeStyle = strokeStyle;
-    ctx.lineTo(drawPoints[0].x, drawPoints[0].y);
+    ctx.lineTo(
+        drawPoints[drawPoints.length - 1].x,
+        drawPoints[drawPoints.length - 1].y
+    );
     ctx.stroke();
 }
 
