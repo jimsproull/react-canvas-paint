@@ -24804,34 +24804,23 @@ Object.defineProperty(exports, "__esModule", {
   value: true
 });
 exports.clearCanvas = clearCanvas;
+exports.drawImageData = drawImageData;
+exports.getImageData = getImageData;
 
 function clearCanvas(canvas) {
   var ctx = canvas.getContext('2d');
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-} // export function getTempCanvasFor(canvas, init) {
-//     if (init && !canvas._tmpCanvas) {
-//         canvas._tmpCanvas = cloneCanvas(canvas);
-//         canvas.parentNode.insertBefore(canvas._tmpCanvas, canvas.nextSibling);
-//     }
-//     return canvas._tmpCanvas;
-// }
-// export function removeTempCanvasFor(canvas) {
-//     const tmpCanvas = getTempCanvasFor(canvas);
-//     tmpCanvas && tmpCanvas.remove();
-//     canvas._tmpCanvas = null;
-// }
-// function cloneCanvas(oldCanvas) {
-//     const newCanvas = document.createElement('canvas');
-//     newCanvas.setAttribute(
-//         'style',
-//         'pointer-events:none; position:absolute; top: 0px; left: 0px;'
-//     );
-//     const context = newCanvas.getContext('2d');
-//     newCanvas.width = oldCanvas.width;
-//     newCanvas.height = oldCanvas.height;
-//     context.drawImage(oldCanvas, 0, 0);
-//     return newCanvas;
-// }
+}
+
+function drawImageData(canvas, imageData) {
+  var ctx = canvas.getContext('2d');
+  return ctx.putImageData(imageData, 0, 0);
+}
+
+function getImageData(canvas) {
+  var ctx = canvas.getContext('2d');
+  return ctx.getImageData(0, 0, canvas.width, canvas.height);
+}
 },{}],"src/constants.js":[function(require,module,exports) {
 "use strict";
 
@@ -24954,7 +24943,7 @@ var CanvasPaint = function CanvasPaint(_ref) {
             var undoData = undoStack[undoIndex - 1];
 
             if (undoData) {
-              drawImageData(canvasRef.current, undoData);
+              (0, _canvas.drawImageData)(canvasRef.current, undoData);
               setUndoIndex(undoIndex - 1);
             }
 
@@ -24966,7 +24955,7 @@ var CanvasPaint = function CanvasPaint(_ref) {
             var redoData = undoStack[undoIndex + 1];
 
             if (redoData) {
-              drawImageData(canvasRef.current, redoData);
+              (0, _canvas.drawImageData)(canvasRef.current, redoData);
               setUndoIndex(undoIndex + 1);
             }
           }
@@ -24995,7 +24984,7 @@ var CanvasPaint = function CanvasPaint(_ref) {
       setIsDrawing(true);
       setDrawPoints([(0, _draw.getMousePos)(e.target, e.clientX, e.clientY)]); // todo - this only should be done once we start moving /shrug/
 
-      e.target._originalPixelData = getImageData(e.target);
+      e.target._originalPixelData = (0, _canvas.getImageData)(e.target);
     },
     onMouseMove: function onMouseMove(e) {
       if (isDrawing) {
@@ -25012,7 +25001,7 @@ var CanvasPaint = function CanvasPaint(_ref) {
     },
     onMouseUp: function onMouseUp(e) {
       if (hasDrawn) {
-        var newImageData = getImageData(e.target);
+        var newImageData = (0, _canvas.getImageData)(e.target);
         addToUndoStack(newImageData);
         e.target._originalPixelData = null;
       }
@@ -25057,16 +25046,6 @@ function doDraw(canvas, drawPoints, brushType, brushWidth) {
   } else {
     (0, _draw.drawLine)(canvas, drawPoints, color, brushWidth);
   }
-}
-
-function drawImageData(canvas, imageData) {
-  var ctx = canvas.getContext('2d');
-  return ctx.putImageData(imageData, 0, 0);
-}
-
-function getImageData(canvas) {
-  var ctx = canvas.getContext('2d');
-  return ctx.getImageData(0, 0, canvas.width, canvas.height);
 }
 
 var _default = CanvasPaint;

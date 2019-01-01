@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { CanvasPaint as styles } from './CanvasPaint.css';
 import PropTypes from 'prop-types';
 import { getMousePos, drawBrush, drawLine } from '../draw';
-import { clearCanvas } from '../canvas';
+import { clearCanvas, drawImageData, getImageData } from '../canvas';
 import { BRUSHES, MODES } from '../constants';
 
 const CanvasPaint = ({
@@ -139,16 +139,6 @@ function doDraw(canvas, drawPoints, brushType, brushWidth, color = 'red') {
     } else {
         drawLine(canvas, drawPoints, color, brushWidth);
     }
-}
-
-function drawImageData(canvas, imageData) {
-    const ctx = canvas.getContext('2d');
-    return ctx.putImageData(imageData, 0, 0);
-}
-
-function getImageData(canvas) {
-    const ctx = canvas.getContext('2d');
-    return ctx.getImageData(0, 0, canvas.width, canvas.height);
 }
 
 export default CanvasPaint;
