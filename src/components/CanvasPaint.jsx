@@ -29,11 +29,11 @@ const CanvasPaint = ({
     const [isDrawing, setIsDrawing] = useState(false);
     const [lastMode, setLastMode] = useState(mode);
     const [drawPoints, setDrawPoints] = useState([]);
-    const canvas = useRef(null);
+    const canvasRef = useRef(null);
     useEffect(() => {
-        if (mode != lastMode && canvas.current) {
+        if (mode != lastMode && canvasRef.current) {
             if (mode == CLEAR) {
-                clearCanvas(canvas.current);
+                clearCanvas(canvasRef.current);
             }
             setLastMode(mode);
         }
@@ -41,7 +41,7 @@ const CanvasPaint = ({
     return (
         <canvas
             className={styles}
-            ref={canvas}
+            ref={canvasRef}
             width={width}
             height={height}
             onMouseDown={e => {
@@ -50,15 +50,19 @@ const CanvasPaint = ({
             }}
             onMouseMove={e => {
                 if (isDrawing) {
-                    const currentPosition = onMouseMove(
-                        e.target,
+                    const currentPosition = getMousePos(
+                        canvasRef.current,
                         e.clientX,
-                        e.clientY,
+                        e.clientY
+                    );
+                    onMouseMove(
+                        e.target,
                         drawPoints,
                         brushType,
                         brushWidth,
                         color
                     );
+
                     setDrawPoints([...drawPoints, currentPosition]);
                 }
             }}
@@ -121,38 +125,33 @@ function removeTempCanvasFor(canvas) {
     canvas._tmpCanvas = null;
 }
 
-function onMouseMove(
-    canvas,
-    x,
-    y,
-    drawPoints,
-    brushType,
-    brushWidth,
-    color = 'red'
-) {
-    const pos = getMousePos(canvas, x, y);
+function onMouseMove(canvas, drawPoints, brushType, brushWidth, color = 'red') {
     const ctx = canvas.getContext('2d');
     ctx.globalCompositeOperation = 'source-over';
 
+    const tempCanvas = getTempCanvasFor(canvas, true);
     if (brushType == BRUSH) {
-        const tempCanvas = getTempCanvasFor(canvas, true);
         drawBrush(tempCanvas, drawPoints, color, brushWidth);
+    } else if (brushType == ERASER) {
+        ctx.globalCompositeOperation = 'destination-out';
+        drawLine(tempCanvas, drawPoints, 'black', brushWidth);
     } else {
-        ctx.beginPath();
-
-        let strokeStyle = color;
-        const lastPosition = drawPoints[drawPoints.length - 1];
-        ctx.moveTo(lastPosition.x, lastPosition.y);
-        if (brushType == ERASER) {
-            ctx.globalCompositeOperation = 'destination-out';
-            strokeStyle = 'black';
-        }
-        ctx.lineWidth = brushWidth;
-        ctx.strokeStyle = strokeStyle;
-        ctx.lineTo(pos.x, pos.y);
-        ctx.stroke();
+        drawLine(tempCanvas, drawPoints, color, brushWidth);
     }
-    return pos;
+}
+
+function drawLine(canvas, drawPoints, color, brushWidth) {
+    const ctx = canvas.getContext('2d');
+    ctx.beginPath();
+
+    let strokeStyle = color;
+    const lastPosition = drawPoints[drawPoints.length - 1];
+    ctx.moveTo(lastPosition.x, lastPosition.y);
+
+    ctx.lineWidth = brushWidth;
+    ctx.strokeStyle = strokeStyle;
+    ctx.lineTo(drawPoints[0].x, drawPoints[0].y);
+    ctx.stroke();
 }
 
 function drawBrush(canvas, drawPoints, color, brushWidth) {
@@ -194,22 +193,17 @@ function midPoint(p1, p2) {
 }
 
 function cloneCanvas(oldCanvas) {
-    //create a new canvas
-    var newCanvas = document.createElement('canvas');
+    const newCanvas = document.createElement('canvas');
     newCanvas.setAttribute(
         'style',
         'pointer-events:none; position:absolute; top: 0px; left: 0px;'
     );
-    var context = newCanvas.getContext('2d');
 
-    //set dimensions
+    const context = newCanvas.getContext('2d');
     newCanvas.width = oldCanvas.width;
     newCanvas.height = oldCanvas.height;
 
-    //apply the old canvas to the new one
     context.drawImage(oldCanvas, 0, 0);
-
-    //return the new canvas
     return newCanvas;
 }
 
